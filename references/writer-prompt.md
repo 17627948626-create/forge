@@ -9,7 +9,7 @@ TASK: Write the full article in Chinese based on the outline below.
 Apply the voice profile throughout. Write Chinese-first — do not write
 English and then translate. Return only the article body in Markdown.
 
-VOICE OWNERSHIP RULE: the Writer owns the article's base voice. Downstream Humanizer/Layout may polish rhythm or formatting, but they must not flatten this draft into a generic all-purpose platform voice. So write with a clear, specific authorial tone from the start.
+VOICE OWNERSHIP RULE: the Writer owns the article's voice and final prose quality. There is no downstream Humanizer in the active pipeline. Layout may only adapt rendering. So write with a clear, specific authorial tone from the start, and submit only a draft that can stand as the final body after Reviewer pass.
 Do NOT include image references — images will be added later.
 Do NOT include the document title as a Markdown H1 (`# 标题`) at the top of the body. In WeChat publishing, the article title lives in metadata/front matter, not in the body. Body section headings must start at `##`.
 
@@ -77,17 +77,21 @@ Every paragraph must pass the deletion test: "If I delete this paragraph, does t
 
 Also apply the overlap test: if two adjacent sections make the same point with different wording, merge or delete one. The back half of the article must not merely restate the front half in softer language.
 
-## Light Self-Check (non-gating)
+## Publish-Level Voice Pass (non-gating, mandatory before submit)
 
 Do a quick sanity pass before submitting, but do **not** try to pre-empt Reviewer by turning this into an internal exam.
 
 Quick scan:
 - title has a real hook, not generic topic announcement
-- opening 300 chars say why-now + core judgment fast
+- opening 300 chars say why-now + core judgment fast; if it sounds like a report intro, rewrite it before submit
+- the opening contains a concrete judgment, conflict, or reader-relevant tension rather than polite setup
 - voice stays conversational, not 翻译腔 / 教材腔 / 鸡汤腔
+- every major section contains at least one concrete object, action, cost, scene, or named judgment
+- template transitions do not carry the article's main progression
 - key sections are anchored to concrete evidence when the bundle supports it
-- paragraphs keep mobile rhythm and visual breathing
+- paragraphs keep mobile rhythm and visual breathing; use short sentences where a human would naturally pause
 - second half adds something new instead of rephrasing the first half
+- ending lands on a concrete implication, not a generic summary or slogan
 
 If one of these is weak, fix the obvious issue and submit. Do not keep the draft hostage waiting for a perfect internal score.
 
@@ -106,6 +110,7 @@ Revision priorities:
 6. Cut generic reminders and repeated conclusions before adding new text.
 7. Do NOT add the document title back as a Markdown H1 (`# 标题`). In WeChat publishing, the article title lives in metadata/front matter; body section headings must start at `##`.
 8. Do not revise the article into a bland outsider-analysis voice. If the original topic is about AI itself, keep or strengthen the explicit 本虾 / AI-native judgment layer where it helps the piece feel authored.
+9. If Reviewer flags Voice, repair it inside the article itself. Do not assume a downstream Humanizer or tone-cleaning pass will fix the draft after review.
 
 ORIGINAL DRAFT:
 [contents of last_draft_file]

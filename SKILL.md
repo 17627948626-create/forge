@@ -1,6 +1,6 @@
 ---
 name: wechat-article-forge
-description: End-to-end 微信公众号 (WeChat Official Account) article writing and publishing pipeline. Multi-agent workflow (active mainline): researcher subagent (topic + outline) → writer subagent (draft) → reviewer subagent (primary adjudication) → revise loop (max 2) → humanizer subagent (tone) → layout subagent (WeChat render adapter) → publish. Use when user asks to write, draft, or publish a WeChat article, or says "forge write/draft/publish/topic/voice/status". For write/draft/publish requests, require the user to explicitly name the target公众号; never assume a default account.
+description: End-to-end 微信公众号 (WeChat Official Account) article writing and publishing pipeline. Multi-agent workflow (active mainline): researcher subagent (topic + outline) → writer subagent (draft) → reviewer subagent (primary adjudication) → revise loop (max 2) → layout subagent (WeChat render adapter) → publish. Reviewer pass is the final content authority; no downstream prose rewriting. Use when user asks to write, draft, or publish a WeChat article, or says "forge write/draft/publish/topic/voice/status". For write/draft/publish requests, require the user to explicitly name the target公众号; never assume a default account.
 ---
 
 # wechat-article-forge
@@ -11,7 +11,7 @@ Multi-agent pipeline: Orchestrator delegates writing and reviewing to independen
 
 ## Scope
 
-**Handles:** Topic research (researcher subagent) → Chinese-first writing → quality review → revise loop → humanize (humanizer subagent) → WeChat render-adapter layout (layout subagent) → publishing to WeChat draft box via `wechat-mp-publisher`, and in cron / worker production flows may continue into formal reader-side publish via `wechat-mp-formal-publish`.
+**Handles:** Topic research (researcher subagent) → Chinese-first writing → quality review → revise loop → Reviewer-approved final draft → WeChat render-adapter layout (layout subagent) → publishing to WeChat draft box via `wechat-mp-publisher`, and in cron / worker production flows may continue into formal reader-side publish via `wechat-mp-formal-publish`.
 
 **Does NOT handle:** Git/version control, non-WeChat platforms, post-publish analytics, WeChat messaging/customer service.
 
@@ -26,8 +26,8 @@ Trigger any command below, or see `skill.yml` for the full trigger pattern list.
 | Command | What it does |
 |---------|-------------|
 | `forge topic X` | Research trending angles, propose 3 options with hooks |
-| `forge write X for <公众号名称>` | Full pipeline: research → publish (8 steps)；必须显式指定公众号名称 |
-| `forge draft X for <公众号名称>` | Write only, stop before publish (steps 1-7, skip step 8)；必须显式指定公众号名称 |
+| `forge write X for <公众号名称>` | Full pipeline: research → reviewed draft → layout → publish；必须显式指定公众号名称 |
+| `forge draft X for <公众号名称>` | Write and review only, stop before publish；必须显式指定公众号名称 |
 | `forge publish <slug> for <公众号名称>` | Publish an existing draft to WeChat draft box；必须显式指定公众号名称 |
 | `forge voice train` | Analyze past articles to extract voice profile |
 | `forge status` | Show pipeline status and pending drafts |
@@ -38,7 +38,7 @@ For `write` / `draft` / `publish`: if the user did not explicitly name the targe
 
 ---
 
-## Pipeline (7 Steps)
+## Pipeline (6 Main Steps + Cover)
 
 State persists to `pipeline-state.json` — survives compaction. See `references/pipeline-state.md`.
 
@@ -49,9 +49,8 @@ State persists to `pipeline-state.json` — survives compaction. See `references
 | 2 | Write | Writer subagent | `draft.md` |
 | 3 | Review | Reviewer subagent | `review-v*.json` |
 | 4 | Revise | Writer subagent | `draft-v*.md` (max 2 rounds; still below `config.json.review_pass_threshold` ⇒ restart from fresh first-draft branch) |
-| 5 | Humanize | Humanizer subagent | `final.md` |
-| 6 | Layout | Layout subagent | `final-layout.md` |
-| 7 | Publish + Cleanup | Orchestrator | `publish.md` → draft box |
+| 5 | Layout | Layout subagent | `final-layout.md` |
+| 6 | Publish + Cleanup | Orchestrator | `publish.md` → draft box |
 
 ### Step 1: Research + Outline
 
@@ -60,7 +59,7 @@ Orchestrator creates the slug/draft directory and initial `pipeline-state.json`,
 1. **Dedup:** Scan the effective publish log for the explicitly selected公众号 over the last 14 days. Same topic + angle = reject. **Keyword hard-cap:** if any core keyword appears in 2+ articles within 7 days, reject outright. If all candidates blocked, pick lowest-overlap and record `topic_dedup_override_reason`.
 2. **Topic strategy for scheduled/daily runs:** unless the user explicitly locks a different direction, prefer a **24-72h hot-topic entrypoint** in the target domain (new model, new product, major company move, viral demo, failure/controversy, financing/org signal). Do **not** turn this into a roundup. One hot hook only. Hot topic is the shell; the thesis/judgment is the core.
    - **Caller-precheck override (new default for xiaolongxia main flow):** if the parent/main agent already passes a hot-topic precheck result (event name / keywords / why-now / thesis seed), treat that as the starting candidate pack. Researcher should verify and sharpen it, not ignore it and rediscover the topic from scratch, unless the evidence clearly collapses.
-   - **Authority boundary:** main agent has first topic-pick authority; Orchestrator has process authority only; Researcher has verification + limited re-route authority only. Writer/Humanizer/Layout have no topic-change authority.
+   - **Authority boundary:** main agent has first topic-pick authority; Orchestrator has process authority only; Researcher has verification + limited re-route authority only. Writer/Layout have no topic-change authority.
 3. **Sources:** use the personal skill `jj-search-stack` as the operational search policy. That stack requires URL-encoding queries before applying any URL template, defines the boundary with native `web_search`, keeps only the validated free entrypoints (Sogou WeChat / Sogou Web / DuckDuckGo HTML / Startpage / Brave Search), requires `web_fetch` on the candidate source page itself for verification/extraction, and uses `tavily-search` (`search` / `extract`) as the stable enhancement + fallback layer. It explicitly avoids Bing search result pages and Eastmoney search pages as primary entrypoints in this environment. For market topics: ≥1 macro trigger, ≥1 market-structure/flow, ≥1 investor-position source with concrete numbers. For daily/hot-topic articles: include at least one timely trigger source proving why this should be published now.
 4. **Eligibility gate:** Finalize only if ≥2 hard evidence anchors support the thesis. Prefer observable data over broad commentary.
 5. **Outline:** 6-8 sections, 1 main insight + 2 named sub-insights → `outline.md`.
@@ -135,14 +134,15 @@ Runs inline in Orchestrator after researcher artifacts arrive (when `cover_style
 ### Steps 2-4: Write → Review → Revise
 
 - **Step 2 (Write):** Chinese-first draft anchored to `research.json`. Each section adds a distinct idea backed by evidence. When spawning the Writer child (`runTimeoutSeconds: 3600`), read `writer_model` from `<workspace>/wechat-article-writer/config.json` as an **optional override only**. If `writer_model` is empty / omitted, Step 2 / Step 4 Writer must simply **inherit the parent/main session model**. Initial drafting should rely on the current topic, `writer-lite-brief.json`, `research.json`, `outline.md`, and `voice-profile.json` only. Do not inject historical top articles or prior high-score article packs into the Writer prompt. See `references/writer-prompt.md`.
-- **Writer execution path:** Keep the Writer child/session boundary exactly as-is, but generate正文 through the Writer subagent itself. The active forge flow has **no CLI writer path and no separate API writer executor path**. Writer / Revise are ordinary subagent steps like Researcher / Reviewer / Humanizer / Layout. Do **not** move正文 generation back to the parent orchestrator.
+- **Writer execution path:** Keep the Writer child/session boundary exactly as-is, but generate正文 through the Writer subagent itself. The active forge flow has **no CLI writer path and no separate API writer executor path**. Writer / Revise are ordinary subagent steps like Researcher / Reviewer / Layout. Do **not** move正文 generation back to the parent orchestrator.
 - **Step 3 (Review):** Reviewer is the primary adjudicator and now uses a **single scoring gate**. Severe issues are expressed as score damage plus `critical_issues`, not as a separate blocker gate. The threshold number is **not duplicated in this skill**: the sole authority is `/root/.openclaw/workspace-xiaolongxia/wechat-article-writer/config.json` → `review_pass_threshold`. The reviewer must always output `weighted_total` in decision rounds. Spawn Reviewer child with `runTimeoutSeconds: 3600`. See `references/reviewer-rubric.md`.
+- **Post-review freeze:** once Reviewer returns pass for the latest draft, that draft is the final body. If it still needs a downstream tone-cleaning pass to be publishable, Reviewer must return revise. No post-review prose rewriter exists in the active pipeline.
 - **Run-specific release rule:** if a single run needs temporary threshold relaxation or special release approval, record it as a run-specific waiver / override in durable run state or artifacts. Do **not** silently reinterpret that as a global default, and do **not** use memory files to override `config.json`.
 - **Step 4 (Revise):** Max **2** automated Writer→Reviewer rounds. Spawn each Writer revision child with `runTimeoutSeconds: 3600`. **Every revise round must use a newly spawned independent Writer subagent; never reuse the previous Writer session for continuing edits.** Continue revising while `weighted_total` is below the effective `review_pass_threshold` from `config.json` and `revision_cycle < 2`. If the second revise still fails, stop extending the same branch and restart from a **fresh first-draft branch** using the locked topic / brief / research pack. Do not revive old `max 3`, `max 5`, `revise-human`, or writer-competition residue as current policy.
 
 Each step spawns a child session. Each child writes its artifact before returning.
 
-**Completion-first orchestration rule (hard requirement):** when any key child step finishes (`researcher` / `writer` / `reviewer` / `humanizer` / `layout`), the orchestrator's **first priority** is to advance the control plane, not to narrate progress. The required order is: **(1)** update `pipeline-state.json`, **(2)** update the run lock, **(3)** write canonical lineage (`children` / `artifact_provenance`), **(4)** move `pending_action` / `current_step` / `phase` to the next step, **(5)** spawn the next child when applicable. Do **not** stop after merely reading or summarizing the child result, and do **not** send a progress-style reply before this state advance is complete.
+**Completion-first orchestration rule (hard requirement):** when any key child step finishes (`researcher` / `writer` / `reviewer` / `layout`), the orchestrator's **first priority** is to advance the control plane, not to narrate progress. The required order is: **(1)** update `pipeline-state.json`, **(2)** update the run lock, **(3)** write canonical lineage (`children` / `artifact_provenance`), **(4)** move `pending_action` / `current_step` / `phase` to the next step, **(5)** spawn the next child when applicable. Do **not** stop after merely reading or summarizing the child result, and do **not** send a progress-style reply before this state advance is complete.
 
 For xiaolongxia main flow, Writer first draft should also go through a **mechanical-only lite preflight** before Reviewer:
 - command: `python /root/.openclaw/skills/wechat-article-forge/scripts/writer_lite_preflight.py <draft-path> --brief-path <writer-lite-brief.json> --research-path <research.json> --output <writer-lite-check.json>`
@@ -155,17 +155,15 @@ For xiaolongxia main flow, Writer first draft should also go through a **mechani
 - required command: `python /root/.openclaw/skills/wechat-article-forge/scripts/ensure_latest_lite_binding.py --state-path <draft-dir>/pipeline-state.json --mode rerun|waiver [--waiver-reason "..."]`
 - the helper must durably do one of two things: (1) rerun preflight and refresh `writer-lite-check.json`, or (2) persist an explicit waiver; in both cases it must write `writer-lite-binding.json` and update `pipeline-state.json` `lite_preflight` fields
 
-### Step 5: Humanize
+### Step 5: Layout
 
-Spawns Humanizer child (`runTimeoutSeconds: 3600`) with latest draft. Uses `content-humanizer-zh` (`wechat` mode): removes 套话、模板腔、翻译腔、机械连接词, improves rhythm. Preserves all facts, data, structure, thesis. Writes `final.md`.
+**Reviewer pass = content final.** The latest Reviewer-approved `draft.md` / `draft-v*.md` is the final content authority. No downstream child may rewrite prose, facts, thesis, argument strength, or voice. Reviewer pass must durably persist `reviewed_draft_file` + `reviewed_draft_sha256` at review completion; audit does not backfill them from current disk bytes.
 
-**Orchestrator 必须在 spawn Humanizer subagent 时，将 `references/humanizer-prompt.md` 的完整内容作为 task prompt 的一部分显式传入。** Humanizer 的权限是“清理 AI 味 + 顺节奏”，不是重写论点，更不是把 Writer 的基础声音抹平成 generic GPT 风格。
+Spawns Layout child (`runTimeoutSeconds: 3600`) with the Reviewer-approved draft recorded in `pipeline-state.json:reviewed_draft_file` (fallback for legacy recovery only: `last_draft_file`). Layout is a **render adapter**, not a second writer. It may identify implicit headings, scanability anchors, visual emphasis, and WeChat-safe structure adaptation, as long as those changes are **semantically preserving**. Writes `final-layout.md`.
 
-### Step 6: Layout
+Before spawning Layout, persist `layout_input_file` and `layout_input_sha256` in `pipeline-state.json`. The lineage helper must fail closed if reviewer-approved bytes are missing or if Layout input does not match them. The publish lineage audit also fails closed if Layout cannot be proven to have consumed the exact Reviewer-approved draft bytes.
 
-Spawns Layout child (`runTimeoutSeconds: 3600`) with `final.md`. Layout is a **render adapter**, not a second writer. It may identify implicit headings, scanability anchors, visual emphasis, and WeChat-safe structure adaptation, as long as those changes are **semantically preserving**. Writes `final-layout.md`.
-
-Layout **没有文风权，也没有改论权**：若文风、逻辑、事实有问题，只能上游修；Layout 不得借格式化之名继续改写 thesis、facts、arguments、语气或作者人格。
+Layout **没有文风权，也没有改论权**：若文风、逻辑、事实有问题，只能退回 Writer/Reviewer；Layout 不得借格式化之名继续改写 thesis、facts、arguments、语气或作者人格。
 
 **Orchestrator 必须在 spawn Layout subagent 时，将 `references/layout-prompt.md` 的完整内容作为 task prompt 的一部分显式传入。** 不能依赖 Layout 子 agent 自行读取 SKILL.md — 它运行在 minimal 上下文，不会自动加载。
 
@@ -188,10 +186,9 @@ Normal progress-lock updates remain **best-effort, non-blocking**: if the lock f
 - After Researcher completes → `current_step: "research_done"`, `phase: "researching"`
 - After Writer completes → `current_step: "draft_done"`, `phase: "drafting"`
 - After Reviewer completes → `current_step: "review_done"`, `phase: "reviewing"`
-- After Humanizer completes → `current_step: "humanize_done"`, `phase: "finalizing"`
 - After Layout completes → `current_step: "layout_done"`, `phase: "finalizing"`
 - On error → `state: "error"`, `note: "<error summary>"`
-- On publish-time human handoff (`safe_check`, `login_scan`, `boss_confirm`) → use `scripts/mark_publish_blocked.py` first; see Step 7 below
+- On publish-time human handoff (`safe_check`, `login_scan`, `boss_confirm`) → use `scripts/mark_publish_blocked.py` first; see Step 6 below
 
 **Hard orchestration rule:** the orchestrator may not leave a completed child reflected as `subagent_status=pending`, `pending_action=spawn_<same_child>`, or equivalent pre-completion state once the child's required artifact(s) already exist and the child has returned normally. A child completion must be consumed immediately into control-plane state before any commentary or yield-like waiting behavior.
 
@@ -211,7 +208,7 @@ Normal progress-lock updates remain **best-effort, non-blocking**: if the lock f
 }
 ```
 
-**Blocked publish handoff rule (Step 7 special case):**
+**Blocked publish handoff rule (Step 6 special case):**
 - `pipeline-state.json` is the **strong requirement** and the authoritative control plane.
 - Run-lock mirroring is **best-effort** only.
 - Before returning `need_user_action`, the orchestrator must first persist a blocked state with at least: `phase`, `step=8`, `current_step`, `waiting_for`, `required_user_action`, stable `safe_check_qr_path`, `relay_status`, `relay_dedupe_key`, `boss_notified_at`, `qr_updated_at`, `blocking_since`, `control_plane_sync`.
@@ -227,23 +224,23 @@ Normal progress-lock updates remain **best-effort, non-blocking**: if the lock f
 
 ---
 
-### Step 7: Publish + Cleanup
+### Step 6: Publish + Cleanup
 
 0. **Run a lineage audit before publish.** Do not treat "there is a markdown file on disk" as sufficient. The orchestrator must verify that the current publish candidate came from the intended child pipeline, not from parent-session improvisation.
    - Required command: `python /root/.openclaw/skills/wechat-article-forge/scripts/lineage_audit.py <draft-dir> --json --write-state`
    - Exit code `0` = clean lineage; exit code `2` = dirty lineage / repair required.
    - Cleanup must happen only after this audit has been persisted (`lineage_audited_at`).
-1. **Required provenance check:** before writing `publish.md`, confirm there is child-session evidence for every required content step already completed in this run: Researcher → Writer → Reviewer → Humanizer → Layout (if layout is not intentionally skipped). Evidence means both: (a) recorded child/session metadata in `pipeline-state.json`, and (b) the expected artifact written by that child.
+1. **Required provenance check:** before writing `publish.md`, confirm there is child-session evidence for every required content step already completed in this run: Researcher → Writer → Reviewer → Layout (if layout is not intentionally skipped). Evidence means both: (a) recorded child/session metadata in `pipeline-state.json`, and (b) the expected artifact written by that child.
 2. **If lineage is clean:** write `publish.md` with front matter (`cover_url` from state, or fallback) and the resolved `author` for the selected公众号 profile when available. Treat `front matter.title` as the **only** document title. The article body must not carry a duplicate H1 of the same title.
    - Required command immediately after writing `publish.md`: `python /root/.openclaw/skills/wechat-article-forge/scripts/normalize_publish_md.py <draft-dir>/publish.md`
    - If the body still contains an H1 or H2 identical to the frontmatter title after normalization, treat it as a publish-blocking contract violation and repair before publish.
    - `normalize_publish_md.py` now does two things: (a) removes duplicate H1/H2 title headings, and (b) sanitizes dangerous inline bold like `**一句话。**后文` / `**1.1%。**后文` by moving trailing punctuation/symbols outside the bold span before publish.
 3. **If lineage is dirty or incomplete:** do **not** publish yet. Instead, enter a repair/rerun branch:
    - Missing Writer evidence → re-spawn Writer from the latest clean checkpoint.
-   - Missing Reviewer / Humanizer / Layout evidence → re-spawn only the missing downstream step from the latest clean checkpoint.
+   - Missing Reviewer / Layout evidence → re-spawn only the missing downstream step from the latest clean checkpoint.
    - If the latest available content artifact was written or modified by the parent/orchestrator directly, mark the lineage as contaminated and roll back to the last clean upstream checkpoint.
    - If no trustworthy checkpoint exists, start a fresh run and regenerate the article; do not stop at failure if article output is still required.
-4. Publish via `wechat-mp-publisher` using the resolved profile/theme/MCP target only after the lineage audit passes. Falls back to `final.md` if layout was intentionally skipped and that skip is explicitly recorded in state. **Do not call raw `wenyan-mcp.publish_article` directly.** Production theme is singular: **`sspai` only**. Do not use `default`, `shaoshupai`, or any ad-hoc theme alias.
+4. Publish via `wechat-mp-publisher` using the resolved profile/theme/MCP target only after the lineage audit passes. Falls back to the Reviewer-approved draft if layout was intentionally skipped and that skip is explicitly recorded in state. **Do not call raw `wenyan-mcp.publish_article` directly.** Production theme is singular: **`sspai` only**. Do not use `default`, `shaoshupai`, or any ad-hoc theme alias.
    - **Profile is first-class and fail-closed.** Before draft-box publish, run:
      `python /root/.openclaw/skills/wechat-article-forge/scripts/publish_profile_preflight.py --profile <profile> --state-path <draft-dir>/pipeline-state.json --publish-md <draft-dir>/publish.md`
    - Missing / unknown profile must fail; do not guess config and do not fallback to a default MCP config.
@@ -347,7 +344,7 @@ Grouped by concern. Each explains *why* — rigid directives without context are
 #### Content Integrity
 
 - **Writer never self-reviews.** Reviewer remains independent from long upstream context. By default do not pass outline / full brief; if a consistency check is truly needed, only a **minimal brief summary** may be passed, and it never becomes the scoring rubric.
-- **Humanizer: tone only.** Never add facts, remove evidence, rewrite arguments, or flatten the Writer's base voice into generic platform copy. Completion requires a text diff or explicit `noop_reason`.
+- **Reviewer pass freezes body text.** If Voice is weak, Reviewer must return revise and Writer must fix it. After Reviewer pass, no content child may polish, humanize, or rewrite prose; Layout may only adapt rendering.
 - **Topic fidelity.** Every revision preserves the 初心 (purpose in `pipeline-state.json`). Drift = FAIL.
 
 #### Research
@@ -409,8 +406,7 @@ Full rubric with scoring criteria: `references/reviewer-rubric.md`
 Orchestrator (Child Pipeline Coordinator) — routes, tracks, enforces gates
     ├── Researcher Subagent — topic discovery, source gathering, outline
     ├── Writer Subagent — drafts + revises
-    ├── Reviewer Subagent — unified scoring adjudication
-    ├── Humanizer Subagent — removes AI tone, improves rhythm
+    ├── Reviewer Subagent — unified scoring adjudication and final content authority
     └── Layout Subagent — WeChat render adapter
 ```
 
@@ -445,8 +441,6 @@ See `references/data-layout.md` for full config schema.
 |------|-------------|
 | `references/writer-prompt.md` | Step 2 (writing) and Step 4 (revision) |
 | `references/reviewer-rubric.md` | Step 3 (review) — full scoring rubric / unified scoring gate criteria |
-| `references/humanizer-prompt.md` | Step 5 — Humanizer boundary: clean AI smell without overwriting writer voice |
-| `/root/.openclaw/skills/content-humanizer-zh/SKILL.md` | Step 5 — Humanizer subagent tone-cleaning rules |
 | `references/viral-article-traits.md` | Step 2 — Writer self-check list |
 | `references/pipeline-state.md` | On resume or compaction — state machine schema + protocol |
 | `references/recovery-protocol.md` | On cron resume — dropped-completion recovery rules |

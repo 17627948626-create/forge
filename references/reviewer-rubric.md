@@ -104,6 +104,18 @@ Hard rule for this dimension:
 - A single isolated use does not automatically fail Voice.
 - But **high density, repeated dependence, or using these expressions as the article's main推进骨架** should materially lower Voice.
 - If the article repeatedly relies on these templates and the author seems absent behind the language, Voice should usually score **<=6**.
+- If the draft still needs a downstream tone-cleaning pass to feel publishable, Reviewer must return `revise`; Reviewer pass freezes body text.
+
+Voice should fail or receive heavy score damage when:
+1. The article sounds like generic platform prose.
+2. The opening delays judgment through polite setup.
+3. The article relies on template transitions instead of cause, conflict, scene, or evidence.
+4. The author is absent from the argument.
+5. Paragraph rhythm is too uniform.
+6. Abstract nouns replace concrete objects and actions.
+7. The ending turns into a generic summary or slogan.
+
+When Voice is a material issue, Reviewer feedback must be executable: cite the exact passage, explain why it sounds manufactured, and tell Writer what concrete repair to make. Do not write vague advice like “make it more natural”.
 
 | Score | Criteria |
 |-------|----------|
@@ -224,6 +236,18 @@ Always return review in this structure:
 ```
 
 Do **not** omit the `scores` block in a final adjudication round, because `weighted_total` is the single pass/fail gate.
+
+For Voice failures, prefer a concrete `critical_issues` item like:
+
+```json
+{
+  "type": "voice_ai_flavor",
+  "issue": "第二节连续几段都在解释概念，作者判断不在场，读起来像平台通稿",
+  "quote": "relevant passage",
+  "fix_direction": "退回 Writer：把这一节开头改成一个明确判断，再接一个具体读者代价或场景",
+  "penalized_dimensions": ["voice", "completion_power"]
+}
+```
 
 If a dimension score is materially relevant, you may include diagnostic score items, for example:
 

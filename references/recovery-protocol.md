@@ -29,7 +29,6 @@ At pipeline start, inspect `pipeline-state.json` + on-disk artifacts before deci
 | `wait_researcher` | `research.json` + `outline.md` | Run cover selection inline, advance to write (research output must comply with `references/researcher-prompt.md` search policy) |
 | `wait_writer` | `draft.md` or `draft-v*.md` | Advance to review |
 | `wait_reviewer` | `review-v*.json` | Advance to next gate |
-| `wait_humanizer` | `final.md` | Advance to layout |
 | `wait_layout` | `final-layout.md` | Advance to publish |
 
 Record `recovered_from_missed_completion=true` in state instead of duplicating the child step.
@@ -44,7 +43,7 @@ When `pending_action` is `wait_reviewer`, the expected child session is already 
 
 This is a recovery exception, not normal workflow. Do not use transcript reads as a substitute for completion events during normal operation.
 
-## Human-Blocked Publish Recovery (MANDATORY for Step 7)
+## Human-Blocked Publish Recovery (MANDATORY for publish phase)
 
 When `pipeline-state.json` shows a publish-time human handoff (`phase=awaiting_human|blocked` with `required_user_action` set), treat it as a **durable control-plane state**, not as a best-effort chat hint.
 
@@ -159,13 +158,24 @@ python /root/.openclaw/skills/wechat-article-forge/scripts/check_publish_blocked
 
 Recovery must trust `pipeline-state.json` first. A stale or missing run lock must not erase a durable blocked state already written to disk.
 
+
+## Content Finality Recovery
+
+After Reviewer pass, the reviewed draft is the final body authority. Recovery must not insert a post-review prose rewrite step.
+
+- If `reviewed_draft_file` is present and its hash matches, re-spawn Layout from that file.
+- If `reviewed_draft_file` or `reviewed_draft_sha256` is missing, treat the run as not yet bound to reviewer-approved bytes and re-run Reviewer before publish.
+- If `layout_input_file` or `layout_input_sha256` is missing/mismatched, treat Layout as dirty and re-run Layout from `reviewed_draft_file`.
+- If the reviewed draft is missing or hash-mismatched, roll back to the Writer/Reviewer checkpoint and re-run Reviewer as needed.
+- Legacy `final.md` is not a trusted checkpoint for active publish recovery.
+
 ## Dirty Lineage Recovery (MANDATORY before publish)
 
 A pipeline is **dirty** when the current body artifact cannot be traced to the intended child-session path for that step.
 
 Examples:
 - `draft.md` exists but there is no Writer child/session evidence for it
-- `final.md` was directly authored or overwritten by the parent/orchestrator
+- `final-layout.md` exists but cannot be traced to Layout consuming the Reviewer-approved draft
 - a downstream artifact exists, but the upstream checkpoint it depends on is already contaminated
 
 ### Rule
@@ -185,8 +195,7 @@ Instead, do this:
 |---|---|---|
 | Writer missing/dirty | `research.json` + `outline.md` from Researcher | Re-spawn Writer |
 | Reviewer missing/dirty | Latest clean `draft*.md` from Writer | Re-spawn Reviewer |
-| Humanizer missing/dirty | Latest clean reviewed draft | Re-spawn Humanizer |
-| Layout missing/dirty | Clean `final.md` from Humanizer | Re-spawn Layout |
+| Layout missing/dirty | Reviewer-approved `reviewed_draft_file` / latest clean reviewed draft | Re-spawn Layout |
 | No clean checkpoint | none | Fresh run |
 
 ### Intent

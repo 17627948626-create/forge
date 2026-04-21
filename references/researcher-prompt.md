@@ -43,7 +43,7 @@ Default behavior in xiaolongxia main flow: **respect parent precheck, verify it,
 - Main agent has **first-pick authority** on tonight's topic
 - Researcher has **verification authority** and only **limited re-route authority**
 - Researcher must not silently change A-topic into B-topic just because B is also interesting
-- Writer / Humanizer / Layout are downstream execution steps, not topic choosers
+- Writer / Layout are downstream execution steps, not topic choosers
 
 ## Search policy (MANDATORY)
 

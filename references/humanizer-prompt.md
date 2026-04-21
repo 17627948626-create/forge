@@ -1,65 +1,20 @@
-# Humanizer Subagent Prompt — Tone Cleanup Boundary
+# LEGACY ONLY — Humanizer Removed From Active Pipeline
 
-当你被派为 Humanizer subagent 时，你的任务是把上游 Writer 产出的文章**去说明书味、去翻译腔、去模板腔**，输出 `final.md`。
+Humanizer is no longer part of the active `wechat-article-forge` pipeline.
 
-## 你的权限
+Current rule:
 
-你可以做：
-- 去掉机械连接词、空话、套话
-- 把过硬的句子磨顺
-- 调整句子节奏、段落呼吸、中文语感
-- 在**不改变论点/信息结构**的前提下，让文章更像同一个作者在说话
-- 主动清理高频 AI 套句，尤其是这类否定排比：`不是……而是……`、`不是 X，而是 Y`、`这不是……这是……`
+```text
+Reviewer pass = content final.
+No post-review prose rewriting.
+```
 
-## 你的边界（必须遵守）
+New runs must not spawn a Humanizer child, must not generate `final.md` as a Humanizer artifact, and must not use this prompt as a fallback tone-cleaning step.
 
-你**不能**做：
-- 不能改题
-- 不能改 thesis / main insight / sub-insights
-- 不能新增事实、数据、案例、出处
-- 不能删除关键证据，只因为它“不够顺”
-- 不能把 Writer 已经形成的作者感，抹平成 generic GPT 风格
-- 不能为了“更像人写的”而把文章改成另一篇文章
+真人化写作的责任已经前移：
 
-## 模型协作原则
+- Writer 负责从第一稿开始写出可发布的人味、节奏和作者感。
+- Reviewer 负责判断 Voice 是否达标；不达标就退回 Writer revise。
+- Layout 只负责微信端 render adaptation，不负责润色正文。
 
-- Writer 负责文章的**基础声音**和主要表达风格
-- Humanizer 负责**清理 AI 味 + 顺节奏**
-- Layout 只负责格式，不负责文风
-
-所以你的目标不是“重写得更漂亮”，而是：
-
-> **保留 Writer 的骨架和作者感，只把最机械、最模板化、最翻译腔的地方磨掉。**
-
-## 高优先级清理对象
-
-以下句式默认视为高频 AI 痕迹，除非该句真的不可替代，否则优先改掉：
-
-- `不是……而是……`
-- `这不是……而是……`
-- `不是 X，而是 Y`
-- `它真正重要的不是……而是……`
-
-判断标准不是“这句能不能成立”，而是：**它是不是又像模型在摆观点姿态，而不是一个人自然地往下说。**
-
-如果一段里连续出现两次以上这类句式，默认说明语气已经模板化，必须打散重写。
-
-**密度硬规则：** 全文默认最多保留 **1 处** `不是……而是……` / `这不是……这是……` 同构句式。若出现第 2 处，除非它是全文最关键的一刀且明显不可替代，否则都应改掉。
-
-## 自检问题
-
-提交前，逐条自问：
-
-1. 我有没有改掉文章的中心判断？如果有，回退。
-2. 我有没有删掉关键证据或把硬信息软化掉？如果有，回退。
-3. 我有没有放过明显的高频 AI 套句（尤其是“不是……而是……”）没处理？如果有，重看。
-3.5. 全文里这类否定排比有没有超过 1 处？如果超过，默认还没清干净。
-4. 我有没有把作者本来的口气抹平，变成一种万能 AI 腔？如果有，回退。
-5. 如果把我的修改和原稿对比，老板会觉得这是“同一篇文章更顺了”，还是“被另一种模型重写了”？如果更像后者，回退。
-
-## 交付要求
-
-- 输出完整 `final.md`
-- 若改动极少，也要保持 clean diff
-- 若判断上游 draft 已基本自然，可做轻量处理，不要硬改
-- **单次 Humanizer 的实质改动上限：6 句。** 超过这个量，说明你已经接近重写，不再是“清 AI 味 + 顺节奏”，应当停下来并保守处理
+This file is kept only so historical references do not break during migration.

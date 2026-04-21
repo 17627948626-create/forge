@@ -24,6 +24,14 @@ For publish-time human handoff (`safe_check`, `login_scan`, `boss_confirm`), `pi
   "last_score": 8.60,
   "last_review_file": "review-v2.json",
   "last_draft_file": "draft-v3.md",
+  "reviewed_draft_file": "draft-v3.md",
+  "reviewed_draft_sha256": "abc123",
+  "review_passed_at": "2026-02-19T13:49:50Z",
+  "content_finalized_by": "reviewer",
+  "content_final_artifact": "draft-v3.md",
+  "layout_input_file": "draft-v3.md",
+  "layout_input_sha256": "abc123",
+  "layout_output_file": "final-layout.md",
   "lite_preflight": {
     "binding_status": "matched",
     "binding_checked_at": "2026-02-19T13:49:31Z",
@@ -88,7 +96,7 @@ For publish-time human handoff (`safe_check`, `login_scan`, `boss_confirm`), `pi
 }
 ```
 
-## Human-Blocked Publish Schema (Step 7)
+## Human-Blocked Publish Schema (Publish phase)
 
 When reader-side publish hits a human checkpoint (`safe_check`, login QR, boss confirmation), the orchestrator must **first** durably write a blocked state, then return `need_user_action` upward.
 
@@ -202,7 +210,7 @@ Do **not** overload `pending_action` with user-facing verbs like `safe_check_sca
 
 | Field | Values |
 |-------|--------|
-| `phase` | `preparing` \| `writing` \| `reviewing` \| `revising` \| `awaiting_human` \| `humanizing` \| `publishing` \| `done` \| `blocked` |
+| `phase` | `preparing` \| `writing` \| `reviewing` \| `revising` \| `awaiting_human` \| `publishing` \| `done` \| `blocked` |
 | `status` | `need_user_action` \| `waiting_retry` \| `blocked` \| other caller-defined business-safe state |
 | `schema_version` | Current canonical write schema marker; reader should be wide, writer should be strict |
 | `source_mode` | `fresh` \| `resume` |
@@ -219,8 +227,12 @@ Do **not** overload `pending_action` with user-facing verbs like `safe_check_sca
 | `lite_preflight.previous_check_*` | The stale/previous canonical check identity seen before rerun or waiver handling |
 | `lite_preflight.latest_check_*` | Canonical `writer-lite-check.json` identity currently bound (or stale) |
 | `lite_preflight.waiver` | Explicit waiver payload when rerun is intentionally skipped |
-| `children` | Per-step child-session evidence: `session_key`, `label`, `model`, `status`, `artifacts` |
-| `artifact_provenance` | Per-artifact producer record; publish audit requires `producer_type=child`, correct `producer_step`, `session_key`, and `model` |
+| `children` | Per-step child-session evidence: `session_key`, `label`, `model`, `status`, `artifacts`. Active canonical steps are `researcher`, `writer`, `reviewer`, `layout`; `humanizer` is legacy read-only and must not be written by new runs. |
+| `artifact_provenance` | Per-artifact producer record; publish audit requires `producer_type=child`, correct active `producer_step`, `session_key`, and `model` |
+| `reviewed_draft_file` / `reviewed_draft_sha256` | Reviewer-approved draft identity, recorded at Reviewer pass time. This draft is the final body authority after Reviewer pass, and audit must verify these fields instead of minting them from current disk bytes. |
+| `content_finalized_by` / `content_final_artifact` | Must be `reviewer` and the same reviewed draft file for active runs. |
+| `layout_input_file` / `layout_input_sha256` | Exact reviewed draft consumed by Layout. Publish audit fails closed if these are missing or do not match. |
+| `layout_output_file` | Layout artifact, normally `final-layout.md`. |
 | `waiting_for` | Human-side wait target, e.g. `boss_scan`, `boss_confirm` |
 | `required_user_action` | Human action verb, e.g. `safe_check_scan`, `login_scan`, `boss_confirm` |
 | `safe_check_qr_path` | Stable local QR/evidence path for the current blocked event; may be `null` for non-QR confirmations |
@@ -264,8 +276,10 @@ Do **not** overload `pending_action` with user-facing verbs like `safe_check_sca
 12. **Before spawning**: write state with label + `pending` FIRST, plus `run_id` / `source_mode`.
 13. **After completion**: save output verbatim, update state, then proceed.
 14. **After every child-step completion**: immediately write canonical lineage at the top level.
-   - Required command: `python /root/.openclaw/skills/wechat-article-forge/scripts/update_pipeline_lineage.py --state-path <draft-dir>/pipeline-state.json --step <researcher|writer|reviewer|humanizer|layout> --session-key <child-session-key> --model <model> --label <label> --artifacts <artifact1> [<artifact2> ...]`
-   - Canonical artifact keys must use **draft-dir relative file names / basenames only** (for example `research.json`, `draft-v4.md`, `review-v3.json`, `final.md`, `final-layout.md`). Do not mix absolute paths, alias keys like `draft_v3_md`, or nested `artifact_paths` as publish authority.
+   - Required command: `python /root/.openclaw/skills/wechat-article-forge/scripts/update_pipeline_lineage.py --state-path <draft-dir>/pipeline-state.json --step <researcher|writer|reviewer|layout> --session-key <child-session-key> --model <model> --label <label> --artifacts <artifact1> [<artifact2> ...]`
+   - On Reviewer pass, pass the exact approved draft: `--approved-artifact <last_draft_file>` so the helper records `reviewed_draft_file`, `reviewed_draft_sha256`, and `content_finalized_by=reviewer`.
+   - For Layout, pass the exact reviewed draft: `--input-artifact <reviewed_draft_file>`. The helper must fail closed if reviewer-approved bytes are missing or if the input does not match them.
+   - Canonical artifact keys must use **draft-dir relative file names / basenames only** (for example `research.json`, `draft-v4.md`, `review-v3.json`, `final-layout.md`). Do not mix absolute paths, alias keys like `draft_v3_md`, `final.md`, or nested `artifact_paths` as publish authority.
    - Top-level `children` + `artifact_provenance` are the publish-control authority. Nested `lineage.*` may remain as compatibility/debug mirrors only.
 15. **Before publish**: run a lineage audit and persist the audit marker before cleanup.
    - Command: `python /root/.openclaw/skills/wechat-article-forge/scripts/lineage_audit.py <draft-dir> --json --write-state`
@@ -282,9 +296,11 @@ revise-auto (4) → review (3) [loop, max 2 automated]
   ↓ (`weighted_total < effective review_pass_threshold` AND cycle >= 2)
 restart_from_fresh_first_draft_branch → write (2)
   ↓ (`weighted_total >= effective review_pass_threshold`)
-humanize (5) → layout (6) → publish_to_draft (7a) → formal_publish (7b)
+content_finalized_by=reviewer; reviewed_draft_file=last_draft_file
+  ↓
+layout (5) → publish_to_draft (6a) → formal_publish (6b)
   ↓ (safe_check / login_scan / boss_confirm)
-awaiting_human / blocked (step 7 persists durable handoff state)
+awaiting_human / blocked (step 6 persists durable handoff state)
   ↓ (human action confirmed or latest QR refreshed)
 formal_publish resumes → reader_side_in_review / reader_side_published / failed
 ```
@@ -315,3 +331,6 @@ Do **not** delete a still-needed QR file early. Old QR artifacts may be removed 
 - Drafts: `draft.md` (initial), `draft-v2.md`, `draft-v3.md`, `draft-v4.md`, ...
 - Reviews: `review-v1.json`, `review-v2.json`, ...
 - `last_draft_file` and `last_review_file` always point to current version.
+- `reviewed_draft_file` points to the Reviewer-approved body authority after pass.
+- `final-layout.md` is the render-adapted layout artifact, not a content rewrite.
+- New active runs do not generate `final.md`; legacy `final.md` is ignored by publish lineage.
