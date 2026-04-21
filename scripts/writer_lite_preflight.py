@@ -28,7 +28,7 @@ DYNAMIC_MARKERS = re.compile(
     re.IGNORECASE,
 )
 TIME_MARKERS = re.compile(r"(截至|observed_at|as of|观察于|更新于|于\s*20\d{2}-\d{2}-\d{2}|20\d{2}-\d{2}-\d{2}|\d+\s*月\s*\d+\s*日|今天|昨日|刚刚|不到\s*\d+\s*(小时|天))", re.IGNORECASE)
-QUOTE_LINE = re.compile(r"[“\"].{6,}[”\"]")
+QUOTE_LINE = re.compile(r"[\"“「『].{6,}[\"”」』]")
 QUOTE_CUE = re.compile(r"(原话|原文|写道|表示|称|说)")
 README_ATTRIBUTION = re.compile(r"(README|仓库介绍|项目主页|项目说明|自称|官方文档|文档写着)")
 BYTES_AS_TEXT = re.compile(r"(字数|汉字|字符|字\b)")
@@ -65,15 +65,16 @@ def get_fact_records(research: Dict[str, Any]) -> List[Dict[str, Any]]:
         "structured_facts",
         "evidence_contract",
     ]
+    records: List[Dict[str, Any]] = []
     for key in candidate_keys:
         value = research.get(key)
         if isinstance(value, list):
-            return [x for x in value if isinstance(x, dict)]
-        if isinstance(value, dict):
+            records.extend(x for x in value if isinstance(x, dict))
+        elif isinstance(value, dict):
             nested = value.get("fact_records")
             if isinstance(nested, list):
-                return [x for x in nested if isinstance(x, dict)]
-    return []
+                records.extend(x for x in nested if isinstance(x, dict))
+    return records
 
 
 def add_issue(issues: List[Dict[str, Any]], code: str, severity: str, summary: str, evidence: Dict[str, Any]) -> None:
@@ -245,7 +246,9 @@ def main() -> int:
 
     blocking_codes = sorted({x["code"] for x in issues if x["severity"] == "hard_block"})
     generated_at = iso_now()
+    blocking_enforced = args.check_mode == "blocking" and bool(blocking_codes)
     result = {
+        "ok": not blocking_enforced,
         "draft_version": args.draft_version or draft_version_from_path(draft_path),
         "generated_at": generated_at,
         "updated_at": generated_at,
@@ -256,7 +259,7 @@ def main() -> int:
         "checks": issues,
         "preflight_scope": "mechanical_red_lights_only",
         "artifact_contract": "script_generated_only",
-        "blocking_enforced": args.check_mode == "blocking" and bool(blocking_codes),
+        "blocking_enforced": blocking_enforced,
         "generator": {
             "script": str(Path(__file__).resolve()),
             "name": "writer_lite_preflight.py",
@@ -278,7 +281,7 @@ def main() -> int:
     if args.output:
         Path(args.output).expanduser().resolve().write_text(output_text + "\n", encoding="utf-8")
     print(output_text)
-    return 0
+    return 2 if blocking_enforced else 0
 
 
 if __name__ == "__main__":

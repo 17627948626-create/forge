@@ -23,7 +23,7 @@ API_DYNAMIC_RE = re.compile(
     re.IGNORECASE,
 )
 README_RE = re.compile(r"(README|readme_claim|项目说明|仓库介绍|自称|官方文档)", re.IGNORECASE)
-QUOTE_RE = re.compile(r"[“\"].{6,}[”\"]")
+QUOTE_RE = re.compile(r"[\"“「『].{6,}[\"”」』]")
 QUOTE_CUE_RE = re.compile(r"(原话|原文|写道|表示|称|一字不改|quote|verbatim)", re.IGNORECASE)
 FILE_SIZE_RE = re.compile(r"\b(\d{3,})\s*(bytes?|字节)\b", re.IGNORECASE)
 RAW_README_URL_RE = re.compile(r"raw\.githubusercontent\.com/.+/README\.md|/README\.md", re.IGNORECASE)
@@ -67,15 +67,16 @@ def get_fact_records(research: Dict[str, Any]) -> List[Dict[str, Any]]:
         "structured_facts",
         "evidence_contract",
     ]
+    records: List[Dict[str, Any]] = []
     for key in candidate_keys:
         value = research.get(key)
         if isinstance(value, list):
-            return [x for x in value if isinstance(x, dict)]
-        if isinstance(value, dict):
+            records.extend(x for x in value if isinstance(x, dict))
+        elif isinstance(value, dict):
             nested = value.get("fact_records")
             if isinstance(nested, list):
-                return [x for x in nested if isinstance(x, dict)]
-    return []
+                records.extend(x for x in nested if isinstance(x, dict))
+    return records
 
 
 def detect_categories(strings: Iterable[str]) -> Dict[str, Any]:

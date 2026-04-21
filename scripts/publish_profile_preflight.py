@@ -155,7 +155,11 @@ def validate_profile(config_path: Path, profile: str) -> Tuple[Dict[str, Any], D
         raise ValueError(f"profile {profile!r} missing publisher.mcp_config_file")
 
     mcp_config_path = resolve_config_path(mcp_config_raw, profiles_path.parent)
-    if mcp_config_path == Path('/root/.openclaw/mcp.json').resolve():
+    ambient_global_mcp_paths = {
+        Path("~/.openclaw/mcp.json").expanduser().resolve(),
+        Path("/root/.openclaw/mcp.json").resolve(),
+    }
+    if mcp_config_path in ambient_global_mcp_paths:
         raise ValueError(f"profile {profile!r} must not use ambient global mcp.json; set a profile-scoped mcp_config_file")
     if not mcp_config_path.exists() or not mcp_config_path.is_file():
         raise FileNotFoundError(f"mcp_config_file not found: {mcp_config_path}")

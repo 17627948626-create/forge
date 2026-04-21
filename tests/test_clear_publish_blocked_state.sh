@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT="$HOME/.openclaw/skills/wechat-article-forge/scripts/clear_publish_blocked_state.py"
-TEST_ROOT="$(mktemp -d "$HOME/.openclaw/skills/wechat-article-forge/tests/tmp.clear_publish_blocked_state.XXXXXX")"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/testlib.sh"
+SCRIPT="$REPO_ROOT/scripts/clear_publish_blocked_state.py"
+TEST_ROOT="$(make_test_root clear_publish_blocked_state)"
 trap 'rm -rf "$TEST_ROOT"' EXIT
 
 RUN_ID="manual:test:clear-blocked"
@@ -44,7 +45,7 @@ cat > "$lock_path" <<'JSON'
 }
 JSON
 
-python3 "$SCRIPT" \
+"$PYTHON_BIN" "$SCRIPT" \
   --state-path "$state_path" \
   --run-lock-path "$lock_path" \
   --status in_review \
@@ -52,7 +53,7 @@ python3 "$SCRIPT" \
   --current-step reader_side_in_review \
   --state done > "$D/result.json"
 
-python3 - "$state_path" "$lock_path" <<'PY'
+"$PYTHON_BIN" - "$state_path" "$lock_path" <<'PY'
 import json,sys
 state=json.load(open(sys.argv[1]))
 lock=json.load(open(sys.argv[2]))
@@ -101,7 +102,7 @@ cat > "$lock_path" <<'JSON'
 }
 JSON
 
-python3 "$SCRIPT" \
+"$PYTHON_BIN" "$SCRIPT" \
   --state-path "$state_path" \
   --run-lock-path "$lock_path" \
   --status failed \
@@ -109,7 +110,7 @@ python3 "$SCRIPT" \
   --current-step publish_failed \
   --state error > "$D/result.json"
 
-python3 - "$state_path" "$D/result.json" <<'PY'
+"$PYTHON_BIN" - "$state_path" "$D/result.json" <<'PY'
 import json,sys
 state=json.load(open(sys.argv[1]))
 result=json.load(open(sys.argv[2]))

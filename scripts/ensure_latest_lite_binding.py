@@ -12,14 +12,16 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import subprocess
 import sys
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Optional
 
 
-PRECHECK_SCRIPT = Path("/root/.openclaw/skills/wechat-article-forge/scripts/writer_lite_preflight.py")
+DEFAULT_PRECHECK_SCRIPT = Path(__file__).resolve().with_name("writer_lite_preflight.py")
 
 
 def iso_now() -> str:
@@ -41,9 +43,30 @@ def load_json(path: Path) -> Dict[str, Any]:
 
 def write_json_atomic(path: Path, data: Dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    tmp = path.with_suffix(path.suffix + ".tmp")
-    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    tmp.replace(path)
+    tmp = path.parent / f".{path.name}.tmp-{os.getpid()}-{uuid.uuid4().hex}"
+    try:
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(data, fh, ensure_ascii=False, indent=2)
+            fh.write("\n")
+            fh.flush()
+            os.fsync(fh.fileno())
+        os.replace(tmp, path)
+        try:
+            dir_fd = os.open(path.parent, os.O_RDONLY | getattr(os, "O_DIRECTORY", 0))
+        except OSError:
+            dir_fd = None
+        if dir_fd is not None:
+            try:
+                os.fsync(dir_fd)
+            finally:
+                os.close(dir_fd)
+    except Exception:
+        try:
+            if tmp.exists():
+                tmp.unlink()
+        except Exception:
+            pass
+        raise
 
 
 def sha256_file(path: Optional[Path]) -> Optional[str]:
@@ -72,6 +95,7 @@ def main() -> int:
     ap.add_argument("--brief-path")
     ap.add_argument("--research-path")
     ap.add_argument("--draft-path")
+    ap.add_argument("--precheck-script", default=str(DEFAULT_PRECHECK_SCRIPT), help="writer_lite_preflight.py path; defaults to sibling script")
     ap.add_argument("--mode", choices=["check", "rerun", "waiver"], default="check")
     ap.add_argument("--check-mode", choices=["blocking", "advisory"])
     ap.add_argument("--change-reason", default="latest draft changed; refresh lite preflight binding")
@@ -103,6 +127,7 @@ def main() -> int:
     binding_path = normalize_state_path(Path(args.binding_path)) if args.binding_path else normalize_state_path(draft_dir / "writer-lite-binding.json")
     brief_path = normalize_state_path(Path(args.brief_path)) if args.brief_path else normalize_state_path(draft_dir / "writer-lite-brief.json")
     research_path = normalize_state_path(Path(args.research_path)) if args.research_path else normalize_state_path(draft_dir / "research.json")
+    precheck_script = normalize_state_path(Path(args.precheck_script))
 
     existing_check = load_json(check_path)
     current_draft_version = draft_version_from_name(draft_path.name)
@@ -152,13 +177,13 @@ def main() -> int:
                 "reason": args.waiver_reason,
             }
         elif args.mode == "rerun":
-            if not PRECHECK_SCRIPT.exists():
-                print(json.dumps({"ok": False, "error": f"preflight script missing: {PRECHECK_SCRIPT}"}, ensure_ascii=False), file=sys.stderr)
+            if not precheck_script.exists():
+                print(json.dumps({"ok": False, "error": f"preflight script missing: {precheck_script}"}, ensure_ascii=False), file=sys.stderr)
                 return 1
             chosen_check_mode = args.check_mode or existing_check_mode or "blocking"
             cmd = [
                 sys.executable,
-                str(PRECHECK_SCRIPT),
+                str(precheck_script),
                 str(draft_path),
                 "--output",
                 str(check_path),
@@ -174,10 +199,14 @@ def main() -> int:
             if research_path.exists():
                 cmd.extend(["--research-path", str(research_path)])
             completed = subprocess.run(cmd, check=False, capture_output=True, text=True)
-            if completed.returncode != 0:
+            if completed.returncode not in (0, 2):
                 sys.stderr.write(completed.stderr)
                 return completed.returncode
             refreshed_check = load_json(check_path)
+            if not refreshed_check:
+                sys.stderr.write(completed.stderr)
+                print(json.dumps({"ok": False, "error": "rerun did not produce writer-lite-check.json"}, ensure_ascii=False), file=sys.stderr)
+                return 1
             refreshed_sha256 = (
                 refreshed_check.get("input_fingerprints", {}).get("draft_sha256")
                 if isinstance(refreshed_check.get("input_fingerprints"), dict)
@@ -188,7 +217,7 @@ def main() -> int:
             if not refreshed_match:
                 print(json.dumps({"ok": False, "error": "rerun completed but refreshed check still does not match latest draft"}, ensure_ascii=False), file=sys.stderr)
                 return 1
-            binding["status"] = "rerun_completed"
+            binding["status"] = "rerun_completed" if completed.returncode == 0 else "rerun_completed_preflight_failed"
             binding["match"] = True
             binding["latest_check_draft_version"] = refreshed_version
             binding["latest_check_draft_sha256"] = refreshed_sha256
@@ -198,7 +227,12 @@ def main() -> int:
                 "change_reason": refreshed_check.get("change_reason"),
                 "check_output_path": str(check_path),
                 "completed_at": checked_at,
+                "preflight_returncode": completed.returncode,
+                "preflight_hard_fail": bool(refreshed_check.get("hard_fail")),
+                "preflight_hard_fail_reasons": refreshed_check.get("hard_fail_reasons") or [],
             }
+            if completed.returncode == 2:
+                exit_code = 2
         else:
             exit_code = 2
 

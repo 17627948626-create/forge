@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT="$HOME/.openclaw/skills/wechat-article-forge/scripts/outline_gate.py"
-TEST_ROOT="$(mktemp -d "$HOME/.openclaw/skills/wechat-article-forge/tests/tmp.outline_gate.XXXXXX")"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/testlib.sh"
+SCRIPT="$REPO_ROOT/scripts/outline_gate.py"
+TEST_ROOT="$(make_test_root outline_gate)"
 trap 'rm -rf "$TEST_ROOT"' EXIT
 
 cat > "$TEST_ROOT/bad-outline.md" <<'MD'
@@ -15,12 +16,12 @@ cat > "$TEST_ROOT/bad-outline.md" <<'MD'
 - 最后一节只做两件事
 MD
 
-if python3 "$SCRIPT" "$TEST_ROOT/bad-outline.md" > "$TEST_ROOT/bad-result.json"; then
+if "$PYTHON_BIN" "$SCRIPT" "$TEST_ROOT/bad-outline.md" > "$TEST_ROOT/bad-result.json"; then
   echo "Expected outline gate failure, but command succeeded" >&2
   exit 1
 fi
 
-python3 - "$TEST_ROOT/bad-result.json" <<'PY'
+"$PYTHON_BIN" - "$TEST_ROOT/bad-result.json" <<'PY'
 import json,sys
 result=json.load(open(sys.argv[1]))
 assert result['hard_fail'] is True
@@ -42,8 +43,8 @@ cat > "$TEST_ROOT/good-outline.md" <<'MD'
 - 回扣方法可开源、神之一手不可开源。
 MD
 
-python3 "$SCRIPT" "$TEST_ROOT/good-outline.md" > "$TEST_ROOT/good-result.json"
-python3 - "$TEST_ROOT/good-result.json" <<'PY'
+"$PYTHON_BIN" "$SCRIPT" "$TEST_ROOT/good-outline.md" > "$TEST_ROOT/good-result.json"
+"$PYTHON_BIN" - "$TEST_ROOT/good-result.json" <<'PY'
 import json,sys
 result=json.load(open(sys.argv[1]))
 assert result['ok'] is True

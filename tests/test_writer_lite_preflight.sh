@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT="$HOME/.openclaw/skills/wechat-article-forge/scripts/writer_lite_preflight.py"
-TEST_ROOT="$(mktemp -d "$HOME/.openclaw/skills/wechat-article-forge/tests/tmp.writer_lite_preflight.XXXXXX")"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/testlib.sh"
+SCRIPT="$REPO_ROOT/scripts/writer_lite_preflight.py"
+TEST_ROOT="$(make_test_root writer_lite_preflight)"
 trap 'rm -rf "$TEST_ROOT"' EXIT
 
 cat > "$TEST_ROOT/research.json" <<'JSON'
@@ -45,19 +46,23 @@ cat > "$TEST_ROOT/draft-v2.md" <<'MD'
 其中一份资料大概有 16790 字。
 MD
 
-python3 "$SCRIPT" "$TEST_ROOT/draft-v2.md" \
+if "$PYTHON_BIN" "$SCRIPT" "$TEST_ROOT/draft-v2.md" \
   --research-path "$TEST_ROOT/research.json" \
   --output "$TEST_ROOT/writer-lite-check.json" \
-  --check-mode blocking > "$TEST_ROOT/stdout.json"
+  --check-mode blocking > "$TEST_ROOT/stdout.json"; then
+  echo "Expected blocking preflight failure, but command succeeded" >&2
+  exit 1
+fi
 
 cmp -s "$TEST_ROOT/stdout.json" "$TEST_ROOT/writer-lite-check.json"
 
-python3 - "$TEST_ROOT/writer-lite-check.json" "$TEST_ROOT/draft-v2.md" "$TEST_ROOT/research.json" <<'PY'
+"$PYTHON_BIN" - "$TEST_ROOT/writer-lite-check.json" "$TEST_ROOT/draft-v2.md" "$TEST_ROOT/research.json" <<'PY'
 import hashlib, json, sys
 result=json.load(open(sys.argv[1]))
 draft_path=sys.argv[2]
 research_path=sys.argv[3]
 assert result['hard_fail'] is True
+assert result['ok'] is False
 assert result['artifact_contract'] == 'script_generated_only'
 assert result['blocking_enforced'] is True
 assert result['generated_at'] == result['updated_at']
@@ -83,4 +88,44 @@ assert result['input_fingerprints']['research_sha256'] == hashlib.sha256(open(re
 print('PASS')
 PY
 
-echo "test_writer_lite_preflight.sh: PASS"
+echo "Test 1: PASS"
+
+cat > "$TEST_ROOT/research-nested.json" <<'JSON'
+{
+  "fact_records": [],
+  "evidence_contract": {
+    "fact_records": [
+      {
+        "id": "F-nested",
+        "quote_mode": "paraphrase_only",
+        "needle": "只能转述这一句"
+      }
+    ]
+  }
+}
+JSON
+
+cat > "$TEST_ROOT/draft-v3.md" <<'MD'
+## 开头
+他写道：『只能转述这一句』。
+MD
+
+if "$PYTHON_BIN" "$SCRIPT" "$TEST_ROOT/draft-v3.md" \
+  --research-path "$TEST_ROOT/research-nested.json" \
+  --output "$TEST_ROOT/writer-lite-check-nested.json" \
+  --check-mode blocking > "$TEST_ROOT/stdout-nested.json"; then
+  echo "Expected nested paraphrase-only quote failure, but command succeeded" >&2
+  exit 1
+fi
+
+"$PYTHON_BIN" - "$TEST_ROOT/writer-lite-check-nested.json" <<'PY'
+import json,sys
+result=json.load(open(sys.argv[1]))
+codes=set(result['hard_fail_reasons'])
+assert 'paraphrase_only_rendered_as_quote' in codes
+assert result['ok'] is False
+print('PASS')
+PY
+
+echo "Test 2: PASS"
+echo "test_writer_lite_preflight.sh: ALL TESTS PASSED"

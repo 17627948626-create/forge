@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT="$HOME/.openclaw/skills/wechat-article-forge/scripts/mark_publish_blocked.py"
-TEST_ROOT="$(mktemp -d "$HOME/.openclaw/skills/wechat-article-forge/tests/tmp.mark_publish_blocked.XXXXXX")"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/testlib.sh"
+SCRIPT="$REPO_ROOT/scripts/mark_publish_blocked.py"
+TEST_ROOT="$(TEST_TMPDIR=/mnt/data make_test_root mark_publish_blocked)"
 trap 'rm -rf "$TEST_ROOT"' EXIT
 
 RUN_ID="cron:evening:2026-04-02T20:00:00+08:00"
@@ -20,7 +21,7 @@ lock_path="$D/evening-run.lock.json"
 qr_dir="$D/media/wechat-safe-check/$SANITIZED"
 qr_path="$qr_dir/safe-check.png"
 mkdir -p "$qr_dir"
-printf 'fakepng' > "$qr_path"
+write_minimal_png "$qr_path"
 
 cat > "$state_path" <<'JSON'
 {
@@ -47,7 +48,7 @@ cat > "$lock_path" <<'JSON'
 }
 JSON
 
-python3 "$SCRIPT" \
+"$PYTHON_BIN" "$SCRIPT" \
   --state-path "$state_path" \
   --run-lock-path "$lock_path" \
   --run-id "$RUN_ID" \
@@ -57,6 +58,7 @@ python3 "$SCRIPT" \
   --phase awaiting_human \
   --status need_user_action \
   --safe-check-qr-path "$qr_path" \
+  --qr-verified \
   --note "WeChat safe_check after continue publish" \
   --relay-status pending_parent_forward \
   --relay-dedupe-key "$RUN_ID:safe_check_scan:1" \
@@ -66,7 +68,7 @@ python3 "$SCRIPT" \
   --timeout-at 2026-04-02T12:11:11Z \
   --resume-context-json '{"browser_session":"default","appmsgid":"100000148"}' > "$D/result.json"
 
-python3 - "$state_path" "$lock_path" "$qr_path" <<'PY'
+"$PYTHON_BIN" - "$state_path" "$lock_path" "$qr_path" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -129,7 +131,7 @@ lock_orig_path="$D/evening-run.lock.orig.json"
 qr_dir="$D/media/wechat-safe-check/$SANITIZED"
 qr_path="$qr_dir/safe-check.png"
 mkdir -p "$qr_dir"
-printf 'fakepng' > "$qr_path"
+write_minimal_png "$qr_path"
 
 cat > "$state_path" <<'JSON'
 {
@@ -153,7 +155,7 @@ JSON
 cp "$lock_path" "$lock_orig_path"
 
 # exit code must be 0 (set -e will catch non-zero automatically)
-python3 "$SCRIPT" \
+"$PYTHON_BIN" "$SCRIPT" \
   --state-path "$state_path" \
   --run-lock-path "$lock_path" \
   --run-id "$RUN_ID" \
@@ -162,6 +164,7 @@ python3 "$SCRIPT" \
   --current-step waiting_safe_check_scan \
   --phase awaiting_human \
   --safe-check-qr-path "$qr_path" \
+  --qr-verified \
   --note "mismatch test" \
   --relay-status pending_parent_forward \
   --relay-dedupe-key "$RUN_ID:safe_check_scan:1" \
@@ -169,7 +172,7 @@ python3 "$SCRIPT" \
   --qr-updated-at 2026-04-02T12:01:11Z \
   --blocking-since 2026-04-02T12:01:11Z > "$D/result.json"
 
-python3 - "$state_path" "$lock_path" "$lock_orig_path" "$D/result.json" <<'PY'
+"$PYTHON_BIN" - "$state_path" "$lock_path" "$lock_orig_path" "$D/result.json" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -222,7 +225,7 @@ lock_path="$D/nonexistent.lock.json"   # intentionally not created
 qr_dir="$D/media/wechat-safe-check/$SANITIZED"
 qr_path="$qr_dir/safe-check.png"
 mkdir -p "$qr_dir"
-printf 'fakepng' > "$qr_path"
+write_minimal_png "$qr_path"
 
 cat > "$state_path" <<'JSON'
 {
@@ -234,7 +237,7 @@ cat > "$state_path" <<'JSON'
 }
 JSON
 
-python3 "$SCRIPT" \
+"$PYTHON_BIN" "$SCRIPT" \
   --state-path "$state_path" \
   --run-lock-path "$lock_path" \
   --run-id "$RUN_ID" \
@@ -243,6 +246,7 @@ python3 "$SCRIPT" \
   --current-step waiting_safe_check_scan \
   --phase awaiting_human \
   --safe-check-qr-path "$qr_path" \
+  --qr-verified \
   --note "missing lock test" \
   --relay-status pending_parent_forward \
   --relay-dedupe-key "$RUN_ID:safe_check_scan:1" \
@@ -250,7 +254,7 @@ python3 "$SCRIPT" \
   --qr-updated-at 2026-04-02T12:01:11Z \
   --blocking-since 2026-04-02T12:01:11Z > "$D/result.json"
 
-python3 - "$state_path" "$lock_path" "$D/result.json" <<'PY'
+"$PYTHON_BIN" - "$state_path" "$lock_path" "$D/result.json" <<'PY'
 import json
 import sys
 from pathlib import Path
@@ -302,7 +306,7 @@ lock_orig_path="$D/corrupt.lock.orig.json"
 qr_dir="$D/media/wechat-safe-check/$SANITIZED"
 qr_path="$qr_dir/safe-check.png"
 mkdir -p "$qr_dir"
-printf 'fakepng' > "$qr_path"
+write_minimal_png "$qr_path"
 
 cat > "$state_path" <<'JSON'
 {
@@ -318,7 +322,7 @@ JSON
 printf '{ this is not valid json !!!' > "$lock_path"
 cp "$lock_path" "$lock_orig_path"
 
-python3 "$SCRIPT" \
+"$PYTHON_BIN" "$SCRIPT" \
   --state-path "$state_path" \
   --run-lock-path "$lock_path" \
   --run-id "$RUN_ID" \
@@ -327,6 +331,7 @@ python3 "$SCRIPT" \
   --current-step waiting_safe_check_scan \
   --phase awaiting_human \
   --safe-check-qr-path "$qr_path" \
+  --qr-verified \
   --note "unparseable lock test" \
   --relay-status pending_parent_forward \
   --relay-dedupe-key "$RUN_ID:safe_check_scan:1" \
@@ -334,7 +339,7 @@ python3 "$SCRIPT" \
   --qr-updated-at 2026-04-02T12:01:11Z \
   --blocking-since 2026-04-02T12:01:11Z > "$D/result.json"
 
-python3 - "$state_path" "$lock_path" "$lock_orig_path" "$D/result.json" <<'PY'
+"$PYTHON_BIN" - "$state_path" "$lock_path" "$lock_orig_path" "$D/result.json" <<'PY'
 import sys
 import json
 from pathlib import Path

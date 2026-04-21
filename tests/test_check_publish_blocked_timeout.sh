@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT="$HOME/.openclaw/skills/wechat-article-forge/scripts/check_publish_blocked_timeout.py"
-TEST_ROOT="$(mktemp -d "$HOME/.openclaw/skills/wechat-article-forge/tests/tmp.check_publish_blocked_timeout.XXXXXX")"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/testlib.sh"
+SCRIPT="$REPO_ROOT/scripts/check_publish_blocked_timeout.py"
+TEST_ROOT="$(make_test_root check_publish_blocked_timeout)"
 trap 'rm -rf "$TEST_ROOT"' EXIT
 
 cat > "$TEST_ROOT/pipeline-state.json" <<'JSON'
@@ -25,11 +26,11 @@ cat > "$TEST_ROOT/pipeline-state.json" <<'JSON'
 }
 JSON
 
-python3 "$SCRIPT" \
+"$PYTHON_BIN" "$SCRIPT" \
   --state-path "$TEST_ROOT/pipeline-state.json" \
   --now 2026-04-02T12:12:11Z > "$TEST_ROOT/result.json"
 
-python3 - "$TEST_ROOT/result.json" "$TEST_ROOT/pipeline-state.json" <<'PY'
+"$PYTHON_BIN" - "$TEST_ROOT/result.json" "$TEST_ROOT/pipeline-state.json" <<'PY'
 import json,sys
 result=json.load(open(sys.argv[1]))
 state=json.load(open(sys.argv[2]))

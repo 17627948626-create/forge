@@ -60,14 +60,20 @@ DEFAULTS = {
 CLEAR_ON_SUCCESS = [
     "waiting_for",
     "required_user_action",
+    "pending_action",
     "safe_check_qr_path",
+    "safe_check_qr_url",
+    "qr_verified",
+    "qr_verification_method",
     "relay_status",
     "relay_dedupe_key",
     "boss_notified_at",
     "qr_updated_at",
     "blocking_since",
     "timeout_at",
+    "timeout_escalated_at",
     "resume_context",
+    "resume_point",
     "blocking",
     "handoff",
 ]
@@ -122,7 +128,18 @@ def mirror_run_lock(run_lock_path: Optional[str], state: Dict[str, Any]) -> Tupl
         "current_step",
         "waiting_for",
         "required_user_action",
+        "pending_action",
         "safe_check_qr_path",
+        "safe_check_qr_url",
+        "qr_verified",
+        "qr_verification_method",
+        "relay_status",
+        "relay_dedupe_key",
+        "boss_notified_at",
+        "qr_updated_at",
+        "blocking_since",
+        "timeout_at",
+        "timeout_escalated_at",
         "resume_context",
         "last_progress_at",
         "last_transition_at",
@@ -132,9 +149,12 @@ def mirror_run_lock(run_lock_path: Optional[str], state: Dict[str, Any]) -> Tupl
         "resume_point",
         "authoritative_signal_kind",
         "authoritative_signal_summary",
+        "blocking",
+        "handoff",
     ]:
         if key in state:
             lock[key] = state[key]
+    lock["control_plane_sync"] = "complete"
     atomic_write_json(path, lock)
     return True, "run_lock_updated"
 
@@ -185,7 +205,11 @@ def main() -> int:
         state["note"] = args.note
 
     if args.resume_context_json:
-        state["resume_context"] = json.loads(args.resume_context_json)
+        resume_context = json.loads(args.resume_context_json)
+        if not isinstance(resume_context, dict):
+            print(json.dumps({"ok": False, "error": "resume_context_json must decode to an object"}, ensure_ascii=False), file=sys.stderr)
+            return 1
+        state["resume_context"] = resume_context
     if args.safe_check_qr_path:
         state["safe_check_qr_path"] = args.safe_check_qr_path
     if args.retry_waiting_for:
@@ -210,6 +234,8 @@ def main() -> int:
             "safe_check_qr_path": state.get("safe_check_qr_path"),
         }
 
+    state["control_plane_sync"] = "partial"
+
     try:
         atomic_write_json(state_path, state)
     except Exception as exc:
@@ -217,6 +243,15 @@ def main() -> int:
         return 1
 
     run_lock_updated, run_lock_status = mirror_run_lock(args.run_lock_path, state)
+    if run_lock_updated:
+        state["control_plane_sync"] = "complete"
+        state["updated_at"] = iso_now()
+        try:
+            atomic_write_json(state_path, state)
+        except Exception as exc:
+            print(json.dumps({"ok": False, "error": f"state sync marker write failed: {exc}"}, ensure_ascii=False), file=sys.stderr)
+            return 1
+
     print(json.dumps({
         "ok": True,
         "state_path": str(state_path),
@@ -224,6 +259,7 @@ def main() -> int:
         "signal_kind": args.signal_kind,
         "run_lock_updated": run_lock_updated,
         "run_lock_status": run_lock_status,
+        "control_plane_sync": state.get("control_plane_sync"),
     }, ensure_ascii=False))
     return 0
 

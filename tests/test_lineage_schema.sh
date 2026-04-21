@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-AUDIT_SCRIPT="$HOME/.openclaw/skills/wechat-article-forge/scripts/lineage_audit.py"
-WRITE_SCRIPT="$HOME/.openclaw/skills/wechat-article-forge/scripts/update_pipeline_lineage.py"
-TEST_ROOT="$(mktemp -d "$HOME/.openclaw/skills/wechat-article-forge/tests/tmp.lineage_schema.XXXXXX")"
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/testlib.sh"
+AUDIT_SCRIPT="$REPO_ROOT/scripts/lineage_audit.py"
+WRITE_SCRIPT="$REPO_ROOT/scripts/update_pipeline_lineage.py"
+TEST_ROOT="$(make_test_root lineage_schema)"
 trap 'rm -rf "$TEST_ROOT"' EXIT
 
 # ────────────────────────────────────────────────────────────────────────────
@@ -60,8 +61,8 @@ printf '{}' > "$D/review-v2.json"
 printf 'final\n' > "$D/final.md"
 printf 'layout\n' > "$D/final-layout.md"
 
-python3 "$AUDIT_SCRIPT" "$D" --json --write-state > "$D/result.json"
-python3 - "$D/result.json" "$D/pipeline-state.json" <<'PY'
+"$PYTHON_BIN" "$AUDIT_SCRIPT" "$D" --json --write-state > "$D/result.json"
+"$PYTHON_BIN" - "$D/result.json" "$D/pipeline-state.json" <<'PY'
 import json,sys
 result=json.load(open(sys.argv[1]))
 state=json.load(open(sys.argv[2]))
@@ -88,14 +89,14 @@ D="$TEST_ROOT/t2"
 mkdir -p "$D"
 printf '{}' > "$D/pipeline-state.json"
 
-python3 "$WRITE_SCRIPT" \
+"$PYTHON_BIN" "$WRITE_SCRIPT" \
   --state-path "$D/pipeline-state.json" \
   --step reviewer_v2 \
   --session-key s-review \
   --model m-review \
   --artifacts review-v2.json > "$D/write-result.json"
 
-python3 - "$D/pipeline-state.json" <<'PY'
+"$PYTHON_BIN" - "$D/pipeline-state.json" <<'PY'
 import json,sys
 state=json.load(open(sys.argv[1]))
 assert list(state['children'].keys()) == ['reviewer']
@@ -107,7 +108,7 @@ PY
 
 echo "Test 2a: PASS"
 
-if python3 "$WRITE_SCRIPT" \
+if "$PYTHON_BIN" "$WRITE_SCRIPT" \
   --state-path "$D/pipeline-state.json" \
   --step writer-lite \
   --session-key s-bad \
