@@ -1,0 +1,203 @@
+display_name: "WeChat Article Writer"
+name: wechat-article-writer
+version: 2.4.1
+permissions:
+  - exec: bun (JS runtime for bundled baoyu renderer)
+  - exec: curl (bun installation if not present)
+  - exec: git, gh CLI (optional — for source repo operations)
+  - filesystem: read/write /root/.openclaw/workspace/wechat-article-writer/ (drafts, config)
+description: End-to-end 微信公众号 article writing and publishing pipeline. For write/draft/publish actions, the user must explicitly specify the target公众号名称; never use a default account.
+
+triggers:
+  # ── forge topic ──────────────────────────────────────────────────────────────
+  - id: forge-topic-en
+    mode: topic
+    patterns:
+      - "forge a topic about {subject}"
+      - "forge topic {subject}"
+      - "forge topic about {subject}"
+      - "suggest wechat topics about {subject}"
+      - "wechat topic ideas for {subject}"
+    examples:
+      - "forge a topic about AI coding assistants"
+      - "forge topic about the latest ChatGPT update"
+      - "suggest wechat topics about developer productivity"
+
+  - id: forge-topic-zh
+    mode: topic
+    patterns:
+      - "帮我选题：{subject}"
+      - "帮我选题关于{subject}"
+      - "公众号选题{subject}"
+      - "给我{subject}的选题"
+      - "选题{subject}"
+    examples:
+      - "帮我选题：大模型应用"
+      - "公众号选题AI编程工具"
+      - "给我技术周报的选题"
+
+  # ── forge write ───────────────────────────────────────────────────────────────
+  - id: forge-write-en
+    mode: write
+    patterns:
+      - "forge write {subject} for {profile}"
+      - "forge write about {subject} for {profile}"
+      - "write a wechat article about {subject} for {profile}"
+      - "create wechat article {subject} for {profile}"
+      - "create wechat article on {subject} for {profile}"
+      - "publish wechat article about {subject} for {profile}"
+    examples:
+      - "forge write about React Server Components for 不上班也有Money"
+      - "write a wechat article about open source LLMs for 小龙虾有话说"
+
+  - id: forge-write-zh
+    mode: write
+    patterns:
+      - "给{profile}写公众号文章：{subject}"
+      - "写一篇关于{subject}的公众号，发到{profile}"
+      - "全流程写作{subject}发到{profile}"
+      - "写公众号文章{subject}发到{profile}"
+    examples:
+      - "给不上班也有Money写公众号文章：Rust异步编程"
+      - "写一篇关于AI画图工具的公众号，发到小龙虾有话说"
+
+  # ── forge draft ───────────────────────────────────────────────────────────────
+  - id: forge-draft-en
+    mode: draft
+    patterns:
+      - "forge draft {subject} for {profile}"
+      - "forge draft about {subject} for {profile}"
+      - "draft a wechat article about {subject} for {profile}"
+      - "write wechat draft about {subject} for {profile}"
+    examples:
+      - "forge draft about Python 3.13 new features for 小龙虾有话说"
+      - "draft a wechat article about vector databases for 不上班也有Money"
+
+  - id: forge-draft-zh
+    mode: draft
+    patterns:
+      - "给{profile}起草公众号文章：{subject}"
+      - "只写草稿{subject}发到{profile}"
+      - "起草一篇关于{subject}的公众号，发到{profile}"
+      - "写草稿{subject}发到{profile}"
+    examples:
+      - "给小龙虾有话说起草公众号文章：本周AI新闻"
+      - "只写草稿开源大模型对比发到不上班也有Money"
+
+  # ── forge publish ─────────────────────────────────────────────────────────────
+  - id: forge-publish-en
+    mode: publish
+    patterns:
+      - "forge publish {draft_id} for {profile}"
+      - "publish draft {draft_id} for {profile}"
+      - "send wechat draft {draft_id} to {profile}"
+      - "push draft {draft_id} to wechat for {profile}"
+    examples:
+      - "forge publish ai-tools-20240217 for 不上班也有Money"
+      - "publish draft tech-weekly-20240215 for 小龙虾有话说"
+
+  - id: forge-publish-zh
+    mode: publish
+    patterns:
+      - "发布草稿{draft_id}到{profile}"
+      - "发布{draft_id}到{profile}"
+      - "推送草稿{draft_id}到{profile}"
+      - "forge publish {draft_id} for {profile}"
+    examples:
+      - "发布草稿 ai-tools-20240217 到 不上班也有Money"
+      - "发布 tech-weekly-20240215 到 小龙虾有话说"
+
+  # ── forge voice ───────────────────────────────────────────────────────────────
+  - id: forge-voice-train-en
+    mode: voice
+    patterns:
+      - "forge voice train"
+      - "train my wechat writing voice"
+      - "analyze my writing style for wechat"
+      - "build voice profile from my articles"
+    examples:
+      - "forge voice train"
+      - "train my wechat writing voice"
+
+  - id: forge-voice-train-zh
+    mode: voice
+    patterns:
+      - "训练我的写作风格"
+      - "分析我的写作风格"
+      - "分析我的公众号风格"
+      - "建立声音档案"
+      - "forge voice train"
+    examples:
+      - "训练我的写作风格"
+      - "分析我的公众号风格"
+
+  # ── forge status ──────────────────────────────────────────────────────────────
+  - id: forge-status-en
+    mode: status
+    patterns:
+      - "forge status"
+      - "wechat article writer status"
+      - "show wechat drafts"
+      - "list wechat drafts"
+      - "wechat pipeline status"
+    examples:
+      - "forge status"
+      - "show wechat drafts"
+
+  - id: forge-status-zh
+    mode: status
+    patterns:
+      - "查看发布状态"
+      - "公众号草稿状态"
+      - "forge status"
+      - "有哪些待发布的草稿"
+    examples:
+      - "查看发布状态"
+      - "有哪些待发布的草稿"
+
+# Negative patterns — do NOT trigger on these
+negative_patterns:
+  - "how does wechat work"
+  - "what is wechat official account"
+  - "wechat api documentation"
+  - "forge a sword"
+  - "forge metal"
+  - "forge documents"
+  - "写一封邮件"
+  - "帮我写邮件"
+  - "write an email"
+  - "写博客文章"
+  - "write a blog post"
+  - "写小红书笔记"
+  - "小红书文案"
+  - "写知乎回答"
+  - "写抖音文案"
+  - "write a tweet"
+  - "写微博"
+
+# Slot definitions
+slots:
+  subject:
+    type: free_text
+    description: The topic or subject of the article
+    required: true
+    capture: rest_of_utterance
+
+  draft_id:
+    type: identifier
+    description: The draft slug or ID from /root/.openclaw/workspace/wechat-article-writer/drafts/
+    required: true
+    pattern: "[a-z0-9][a-z0-9-]*"
+
+  profile:
+    type: free_text
+    description: Required target公众号名称 for write/draft/publish; must exactly match a key in wechat-article-writer/profiles.json
+    required: false
+
+# Configuration
+# Skill metadata
+skill_metadata:
+  invoke_as: skill
+  max_concurrency: 2
+  timeout_minutes: 60
+  background_eligible: true   # long forge write runs can be backgrounded
