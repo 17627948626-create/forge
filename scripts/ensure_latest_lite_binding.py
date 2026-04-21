@@ -217,7 +217,9 @@ def main() -> int:
             if not refreshed_match:
                 print(json.dumps({"ok": False, "error": "rerun completed but refreshed check still does not match latest draft"}, ensure_ascii=False), file=sys.stderr)
                 return 1
-            binding["status"] = "rerun_completed" if completed.returncode == 0 else "rerun_completed_preflight_failed"
+            # Keep the durable enum focused on binding state. Preflight failure
+            # remains observable via exit code + resolution.preflight_* details.
+            binding["status"] = "rerun_completed"
             binding["match"] = True
             binding["latest_check_draft_version"] = refreshed_version
             binding["latest_check_draft_sha256"] = refreshed_sha256

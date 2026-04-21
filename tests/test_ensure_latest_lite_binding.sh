@@ -104,14 +104,15 @@ root = pathlib.Path(sys.argv[1])
 state = json.load(open(root / 'pipeline-state.json'))
 check = json.load(open(root / 'writer-lite-check.json'))
 binding = json.load(open(root / 'writer-lite-binding.json'))
-assert binding['status'] == 'rerun_completed_preflight_failed'
+assert binding['status'] == 'rerun_completed'
 assert binding['match'] is True
 assert binding['resolution']['preflight_returncode'] == 2
 assert binding['resolution']['preflight_hard_fail'] is True
 assert check['draft_version'] == 'draft-v5'
 assert check['hard_fail'] is True
-assert state['lite_preflight']['binding_status'] == 'rerun_completed_preflight_failed'
+assert state['lite_preflight']['binding_status'] == 'rerun_completed'
 assert state['lite_preflight']['match'] is True
+assert state['lite_preflight']['resolution']['preflight_hard_fail'] is True
 print('PASS')
 PY
 

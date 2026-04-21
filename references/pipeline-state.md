@@ -213,6 +213,7 @@ Do **not** overload `pending_action` with user-facing verbs like `safe_check_sca
 | `last_clean_step` | Last trustworthy step name with both artifact + child evidence |
 | `repair_attempts` | Non-negative integer; increment on each dirty-lineage recovery attempt |
 | `lite_preflight.binding_status` | `matched` \| `rerun_completed` \| `waived` \| `mismatch_requires_action` |
+`rerun_completed` only means the latest draft has been durably rebound to a refreshed `writer-lite-check.json`. If that refreshed preflight still hard-fails, keep the enum unchanged and inspect `lite_preflight.resolution.preflight_*` plus the helper exit code.
 | `lite_preflight.binding_artifact` | Durable artifact path, typically `<draft-dir>/writer-lite-binding.json` |
 | `lite_preflight.last_draft_*` | Current latest-draft identity used for binding (`file` / `version` / `sha256`) |
 | `lite_preflight.previous_check_*` | The stale/previous canonical check identity seen before rerun or waiver handling |
