@@ -1,20 +1,20 @@
 # Reviewer Rubric - WeChat 公众号 Article Quality
 
-> v6 - 2026-04-09. Unified-score revision. Reviewers judge TEXT, not outcomes. All scored dimensions are observable in the article itself - no prediction of reader behavior, shares, or platform metrics. WeChat signals (完读率, 分享, 收藏) are outcomes determined by distribution, timing, and audience size. A reviewer reading a draft cannot predict them. What a reviewer CAN judge: whether the writing is clear, original, compelling, emotionally alive, readable, and voiced like a real person.
+> v6.1 - 2026-04-22. Unified-score gate + author-presence revision.
+> Reviewers judge **the text on the page**, not platform outcomes.
+> A reviewer cannot predict shares, open rate, or distribution luck. A reviewer can judge whether the draft is specific, original, emotionally alive, readable on mobile, and voiced like a real person with a real point of view.
 
 ## Review Protocol (current gate semantics)
 
-Reviewer output now uses **one unified scoring gate**.
+Reviewer output uses **one unified scoring gate**.
 
 Hard rule:
 - **Final pass requires `weighted_total >= review_pass_threshold`**
 - **`review_pass_threshold` lives in exactly one authority source: `/root/.openclaw/workspace-xiaolongxia/wechat-article-writer/config.json` → `review_pass_threshold`**
-- Severe problems are **not managed as a separate blocker gate anymore**; they must be reflected as heavy score penalties inside the relevant dimensions, especially `Voice`, `Completion Power`, `Title`, and `Insight Density`
-- `UPGRADE_SUGGESTIONS` remain **non-blocking by default**
-- `UPGRADE_SUGGESTIONS` should default to **at most 3 items**
-- Review should still call out severe issues clearly, but they now live inside `critical_issues` / score notes rather than a separate blocker pass/fail system
-
-Diagnostic scoring is no longer secondary decoration: it is the **single source of truth** for pass/revise decisions, and the threshold number comes only from `config.json.review_pass_threshold`.
+- Severe problems are **not** managed as a separate blocker gate; they must be reflected as heavy score damage inside the relevant dimensions, especially `Voice`, `Completion Power`, `Title`, and `Insight Density`
+- `upgrade_suggestions` remain **non-blocking by default**
+- `upgrade_suggestions` should default to **at most 3 items**
+- Review should still call out severe issues clearly, but the release decision comes back to the total score
 
 Reviewer also has a **保亮点义务**:
 - point out the **one judgment / sharp line** most worth preserving
@@ -22,72 +22,76 @@ Reviewer also has a **保亮点义务**:
 
 This duty is subordinate to gatekeeping: preserving a highlight is not a reason to pass a draft whose total score is still below the line.
 
-## Diagnostic Dimensions (advisory only)
+## Diagnostic Dimensions
 
 ### Insight Density (洞察密度) - Weight: 14%
 
-How many genuinely surprising, non-obvious ideas per 1000 characters? This is the core value proposition of any article.
+How many genuinely surprising, non-obvious ideas per 1000 characters? This is the article's core value proposition.
 
 | Score | Criteria |
 |-------|----------|
-| 9-10 | Multiple "我靠,没想到" moments. Each major section delivers a non-obvious insight backed by evidence. The ideas are SPECIFIC and nameable, not vague gestures at complexity. Reader learns something they couldn't have guessed. |
+| 9-10 | Multiple 「我靠，没想到」 moments. Each major section delivers a non-obvious insight backed by evidence. The ideas are specific and nameable, not vague gestures at complexity. |
 | 7-8 | 1 strong main insight plus at least 1 useful secondary insight; some sections still feel predictable or overlapping. |
-| 5-6 | Rehashes known ideas clearly. Well-organized but too much overlap/restatement and no meaningful secondary insight. |
-| 3-4 | Obvious points stated with confidence. Reader already knows all of this. |
+| 5-6 | Competent summary, but too much overlap / restatement and no meaningful secondary insight. |
+| 3-4 | Obvious points stated with confidence. Reader likely knew this already. |
 | 0-2 | Zero insight. Pure filler or platitude. |
 
-**Key test:** For each section, can you state the non-obvious claim in one sentence? If the sentence is something anyone would say, score ≤6.
+**Key test:** For each section, can you state the non-obvious claim in one sentence? If the sentence is something any competent generalist would say, score ≤6.
 
 ### Originality (新鲜感) - Weight: 14%
 
-Unique angle is the #6 trait of viral articles (南方传媒书院). In an era of AI-generated content, originality is the only moat.
+Originality is not novelty theater. It is whether the framing feels earned and distinctly this article's own.
 
 | Score | Criteria |
 |-------|----------|
-| 9-10 | Genuinely new insight or framing. Reader thinks "I never thought about it that way." Has a specific, nameable core idea that cannot be found in 1000 other articles on the same topic. The insight is EARNED through research/experience, not manufactured. |
-| 7-8 | Fresh angle on a known topic. Not groundbreaking, but not the same take everyone else has. |
-| 5-6 | Competent synthesis of existing ideas. Well-written but the reader has seen this before. |
-| 3-4 | Rehashed talking points. Could be generated by anyone with access to the same sources. |
-| 0-2 | Plagiarism-adjacent. Zero original thought. |
+| 9-10 | Genuinely new insight or framing. Reader thinks 「我之前没这样想过」. The core idea is specific, nameable, and not easily swappable with 1000 similar articles. |
+| 7-8 | Fresh angle on a known topic. Not groundbreaking, but clearly not the most generic take. |
+| 5-6 | Competent synthesis of existing ideas. Well-written but familiar. |
+| 3-4 | Rehashed talking points. Could be produced from the same public source pack by almost anyone. |
+| 0-2 | Zero original thought. |
 
 ### Emotional Resonance (情感共鸣) - Weight: 20%
 
-共鸣 is the #1 trait of viral articles. The reader must feel "说的就是我" or experience genuine emotional arousal (positive or negative). Low-arousal emotions (contentment, sadness) don't drive shares; high-arousal emotions (awe, anger, anxiety, inspiration) do.
+The reader should feel seen, unsettled, fired up, relieved, or newly alert. Emotion must be earned by judgment, evidence, and scene.
 
 | Score | Criteria |
 |-------|----------|
-| 9-10 | Hits reader in the gut. They feel genuinely different after reading - moved, fired up, unsettled, or deeply seen. Emotion is EARNED by evidence and storytelling, not manufactured by rhetoric. Complete emotional arc: setup → tension → resolution/revelation. |
-| 7-8 | Good emotional moments but some flat stretches. The feeling is real but not sustained. |
+| 9-10 | Hits the reader in the gut. Emotion is earned, not pushed. The article contains a visible emotional arc: setup → tension → release / revelation. |
+| 7-8 | Real emotional moments but some flat stretches. |
 | 5-6 | Occasional emotional flickers. Mostly intellectual, not visceral. |
-| 3-4 | Flat. Reader feels nothing. Pure information delivery. |
-| 0-2 | Actively annoying - condescending, preachy, or manipulatively sentimental. |
+| 3-4 | Flat. Reader feels little beyond information intake. |
+| 0-2 | Actively annoying: preachy, manipulative, or hollowly sentimental. |
 
 ### Completion Power (完读力) - Weight: 18%
 
-WeChat platform avg completion rate: 15-25%. Top articles: 45-60%. This dimension predicts whether readers finish or bail. It subsumes old "hook" and "engagement" - because what matters is not just the opening OR the middle, but whether every section earns the next scroll.
+This predicts whether each screen earns the next scroll.
 
 | Score | Criteria |
 |-------|----------|
-| 9-10 | Unputdownable. Every paragraph creates a micro-reason to keep reading: unanswered question, escalating stakes, surprising turn, building pattern. The "3-second test" passes on EVERY screen-scroll, not just the opening. No section where the reader's thumb hovers over the back button. Mobile-optimized: short paragraphs (≤4 lines on phone), visual breathing, varied rhythm. |
-| 7-8 | Strong pull with 1-2 flat spots. Reader skims a section but comes back. |
-| 5-6 | Starts strong, sags in the middle. Reader finishes out of obligation, not desire. |
-| 3-4 | Only the opening is compelling. Most readers bail before halfway. |
-| 0-2 | Even the opening fails. Wall of text, no hooks, no reason to continue. |
+| 9-10 | Unputdownable. Every paragraph creates a micro-reason to continue: unresolved tension, concrete stakes, surprising turn, or accumulating pattern. Mobile rhythm is strong. |
+| 7-8 | Strong pull with 1-2 flat spots. |
+| 5-6 | Starts well, sags in the middle. Reader finishes more from duty than desire. |
+| 3-4 | Only the opening is interesting. Most readers likely bail before halfway. |
+| 0-2 | Even the opening fails. No hook, no pace, no reason to stay. |
 
-**Mobile check:** Is there ever a full phone screen (5+ lines) without a visual break, subheading, bold text, or new paragraph? Each occurrence = -1.
+**Mobile check:** Is there ever a full phone screen (5+ lines) without a visual break, subheading, bold text, or new paragraph? Each occurrence = -1 pressure on `Completion Power`.
 
-**Argument closure check (论证闭环):** For 观点类 articles ≤2000 characters: does the article complete a full argument loop — claim → evidence → implication? A short article that opens a strong claim but never lands evidence, or lands evidence but skips the "so what", scores ≤6 on Completion Power regardless of prose quality. Short does not mean incomplete.
+**Argument closure check (论证闭环):** For 观点类 articles ≤2000 characters: does the article complete a full argument loop — claim → evidence → implication? If not, `Completion Power` should usually score ≤6 regardless of prose polish.
 
 ### Voice (语感) - Weight: 18%
 
-Natural Chinese that sounds like a specific person thinking out loud, not a committee or algorithm.
+Natural Chinese that sounds like **a specific person thinking on the page**, not a committee or a pattern engine.
 
-This dimension is also the **primary detector for visible AI-flavor / 作者不在场感**.
-Reviewers should explicitly watch for high-frequency template expressions, pseudo-sharp summary lines, and over-stable GPT-style transitions that make the text feel like "it knows how to imitate writing" rather than "a person is here thinking".
+This is the primary detector for **作者不在场感** and visible AI-flavor.
 
-High-risk AI-flavor signals include but are not limited to:
-- `不是……而是……`
-- `随着……的快速发展`
+Reviewer must explicitly judge these four sub-signals inside `Voice`:
+1. **Opening interchangeability** — could the opening be pasted onto 30-50 other articles on the same topic without anyone noticing?
+2. **Author presence** — do we feel a live judgment, a live implication, or a lived reading of the material?
+3. **Transition dependence** — is the article advancing through cause / conflict / scene / implication, or mostly through template connectors?
+4. **Ending sloganism** — does the ending land on a concrete implication / choice / cost, or dissolve into a banner-like summary line?
+
+High-risk manufactured-language signals include but are not limited to:
+- `随着……的发展`
 - `总而言之 / 综上所述 / 总之`
 - `值得注意的是 / 值得一提的是`
 - `具体而言 / 具体来说`
@@ -99,49 +103,55 @@ High-risk AI-flavor signals include but are not limited to:
 - `未来已来`
 - `不仅如此 / 更重要的是`
 - `底层逻辑 / 认知升级`
+- polite report-style openings that delay the article's judgment
+- interchangeable endings that could close any article in the category
 
 Hard rule for this dimension:
-- A single isolated use does not automatically fail Voice.
-- But **high density, repeated dependence, or using these expressions as the article's main推进骨架** should materially lower Voice.
-- If the article repeatedly relies on these templates and the author seems absent behind the language, Voice should usually score **<=6**.
-- If the draft still needs a downstream tone-cleaning pass to feel publishable, Reviewer must return `revise`; Reviewer pass freezes body text.
+- A single isolated template phrase does not automatically fail `Voice`
+- But **high density, repeated dependence, or using such phrases as the article's main progression logic** should materially lower `Voice`
+- If the author still does not feel present behind the text, `Voice` should usually score **≤6**
+- If the draft still needs a downstream tone-cleaning pass to feel publishable, Reviewer must return `revise`; Reviewer pass freezes body text
 
-Voice should fail or receive heavy score damage when:
-1. The article sounds like generic platform prose.
-2. The opening delays judgment through polite setup.
-3. The article relies on template transitions instead of cause, conflict, scene, or evidence.
-4. The author is absent from the argument.
-5. Paragraph rhythm is too uniform.
-6. Abstract nouns replace concrete objects and actions.
-7. The ending turns into a generic summary or slogan.
+`Voice` should fail or receive heavy score damage when:
+1. The article sounds like generic platform prose
+2. The opening delays judgment through polite setup or generic background
+3. The article relies on template transitions instead of cause, conflict, scene, or evidence
+4. The author is absent from the argument
+5. Paragraph rhythm is too uniform
+6. Abstract nouns replace concrete objects, actions, or costs
+7. The ending turns into a generic summary, moral, or slogan
 
-When Voice is a material issue, Reviewer feedback must be executable: cite the exact passage, explain why it sounds manufactured, and tell Writer what concrete repair to make. Do not write vague advice like “make it more natural”.
+When `Voice` is a material issue, feedback must be executable:
+- cite the exact passage
+- explain why it sounds manufactured or absent
+- tell Writer what concrete repair to make
+Do **not** write vague advice like 「更自然一点」.
 
 | Score | Criteria |
 |-------|----------|
-| 9-10 | Unmistakably human. Has a personality - you could recognize the author blind. Sentence rhythm varies naturally. Colloquial without being sloppy. Would pass the "read aloud" test - sounds like someone talking, not reciting. No obvious high-density AI template smell. |
-| 7-8 | Mostly natural with minor stiff patches. May contain 1-2 familiar templates, but they do not control the article's rhythm or人格。 |
-| 5-6 | Functional but generic. Could be any competent writer. Noticeable GPT-style transitions / summary lines / template phrases begin to accumulate and weaken作者在场感。 |
-| 3-4 | Stiff, formal, or inconsistent. Switches registers awkwardly. Heavy visible AI-template dependence makes the text feel manufactured. |
-| 0-2 | Obvious 翻译腔, 教材腔, 鸡汤腔, or dense AI-template smell. The author is effectively absent behind the language. |
+| 9-10 | Unmistakably human. Strong personality. Sentence rhythm varies naturally. Specific personhood is present on the page. Opening lands quickly. Ending lands concretely. Little to no visible template dependence. |
+| 7-8 | Mostly natural with minor stiff patches. Some familiar templates may appear, but they do not control the article's rhythm or the sense of authorship. |
+| 5-6 | Functional but generic. Noticeable template connectors / summary lines accumulate. Author-presence is intermittent or weak. |
+| 3-4 | Stiff, formal, over-processed, or awkwardly mixed in register. Heavy visible template dependence makes the text feel manufactured. |
+| 0-2 | Obvious 翻译腔 / 教材腔 / 鸡汤腔 / dense AI-template smell. The author is effectively absent behind the language. |
 
 ### Title (标题) - Weight: 16%
 
-Title determines open rate (打开率). Platform avg: 1.9%, good: 4.3%+. At 18% weight, title is a co-equal top factor alongside emotional resonance - without a click, content quality is irrelevant. A great title on a bad article is still a trust violation that loses followers, but the weight reflects that title is a primary lever for open rate.
+Title determines the click. A strong title promises a specific judgment the body actually earns.
 
-**Search visibility rule (微信搜一搜 SEO):** Title must contain at least one high-intent keyword naturally integrated — prefer specific terms (Agent, 大模型, 人形机器人, 具身智能, OpenAI, Claude, 推理模型…) over generic ones (AI, 技术). Generic terms like 「AI」 alone are acceptable only when combined with a specific angle that makes the query distinctive. **Keyword must feel like the author's own word choice, not something bolted on.** If title has no recognizable keyword, cap Title score at 6 regardless of other qualities. When the article clearly relies on a current hot hook, prefer the real event / product / company keyword over a vague umbrella term.
+**Search visibility rule (微信搜一搜 SEO):** Title should contain at least one high-intent keyword integrated naturally — prefer specific terms (`Agent`, `大模型`, `人形机器人`, `OpenAI`, `Claude`, `推理模型` …) over vague umbrellas (`AI`, `技术`). If title has no recognizable keyword, cap `Title` at 6.
 
-**Argument visibility rule:** Title must signal a specific judgment, conflict, or counter-intuitive claim — not just announce a topic. A title that could apply to 1000 articles on the same topic scores ≤7 even with perfect SEO.
+**Argument visibility rule:** Title must signal a specific judgment, conflict, or counter-intuitive claim — not merely announce the topic.
 
-**Lead consistency check (正文前300字):** Reviewer must verify that the keyword in the title also appears naturally in the opening 300 characters and that the article's core claim is established within those 300 characters. If not, deduct 1 point from Title score.
+**Lead consistency check (正文前300字):** Reviewer must verify that the keyword in the title also appears naturally in the opening 300 characters and that the core claim is established there. If not, deduct 1 point from `Title`.
 
 | Score | Criteria |
 |-------|----------|
-| 9-10 | Irresistible curiosity gap. Reader MUST click. ≤26 characters. Specific and concrete. Promises something the article delivers. Contains one specific high-intent keyword naturally integrated. Title expresses a clear judgment or counter-intuitive claim that only this article makes. Lead (first 300 chars) echoes the keyword and lands the core argument. |
-| 7-8 | Good click appeal. Has a keyword but it's a generic term (AI/技术) or slightly bolted-on, OR has great integration but keyword is too niche for meaningful search volume. |
-| 5-6 | Descriptive but not compelling. Or: compelling but zero search visibility. Or: has keyword but title could apply to hundreds of other articles. |
-| 3-4 | Weak, too long, misleading, or keyword-stuffed at the expense of readability. |
-| 0-2 | Terrible or clickbait that article doesn't deliver. |
+| 9-10 | Irresistible curiosity gap. Reader wants to click now. ≤26 characters. Specific. Delivers what it promises. Contains one specific high-intent keyword naturally integrated. Lead echoes the keyword and lands the core claim. |
+| 7-8 | Good click appeal. Slightly generic keyword choice or slightly bolted-on integration, but still strong. |
+| 5-6 | Descriptive but not compelling. Or compelling but weak on search visibility. Or too swappable with many articles on the same topic. |
+| 3-4 | Weak, too long, misleading, or keyword-stuffed. |
+| 0-2 | Terrible or clickbait the article does not deliver. |
 
 ---
 
@@ -153,8 +163,8 @@ Title determines open rate (打开率). Platform avg: 1.9%, good: 4.3%+. At 18% 
 | Originality (新鲜感) | 14% | Unique framing vs rehashed takes |
 | Emotional Resonance (情感共鸣) | 20% | Earned emotional arc in the text |
 | Completion Power (完读力) | 18% | Pacing, hooks, micro-tension per scroll |
-| Voice (语感) | 18% | Natural Chinese, personality, rhythm |
-| Title (标题) | 16% | Clarity, specificity, length |
+| Voice (语感) | 18% | Author presence, naturalness, rhythm, low template dependence |
+| Title (标题) | 16% | Specificity, judgment, click value, search visibility |
 | **Total** | **100%** | |
 
 ## Pass/Fail Criteria
@@ -167,18 +177,18 @@ Other per-dimension signals remain diagnostic unless the caller explicitly re-en
 
 ### Severe Issues (must be fused into scoring, not split as separate blockers)
 
-The following issues should no longer be managed as a separate `BLOCKERS` gate. Instead, they must trigger **material score damage** in the relevant dimensions and be surfaced under `critical_issues`:
+These issues should trigger **material score damage** in the relevant dimensions and be surfaced under `critical_issues`:
 
-1. **标题党 / 过度承诺**：标题或开头承诺了正文并未兑现的判断、结论或强度。
-2. **严重教材腔 / 翻译腔 / 鸡汤腔**：不是局部生硬，而是已经明显伤害可读性、可信度或作者人格。
-3. **严重灌水**：存在成段的无新增信息 / 无新增判断 / 无新增情绪推进的填充内容。
-4. **严重模板化**：结构和语言明显落回套板，导致文章像可替换关键词的流水线产物。尤其当文章高频依赖下列 AI 常见模板表达来推进论证时，应重罚：`不是……而是……`、`随着……的发展`、`总而言之 / 综上所述`、`值得注意的是 / 值得一提的是`、`具体而言`、`换言之 / 也就是说`、`我们不难发现`、`由此可见`、`毫无疑问 / 毋庸置疑`、`不仅如此 / 更重要的是`、`底层逻辑 / 认知升级` 等。
-5. **核心判断不成立 / 明显失焦**：文章真正站不住主判断，或已经偏离该稿的核心问题。
-6. **与 brief 明显冲突（含偷漂移）**：与既定方向、核心判断或边界要求实质不一致。
-7. **关键论证支撑不足**：核心判断缺少最低限度事实依据、关键例证明显不成立、论证链有实质断裂、标题判断强于正文可支撑强度、以个例偷换普遍结论 / 因果跳步。
-8. **推断越界 / 事实边界越界**：把未被材料支持的推断写成事实，或越过证据边界下过强结论。
-
-Reviewers should name these issues clearly, but the release decision must still come back to the total score.
+1. **标题党 / 过度承诺** — title or opening promises a strength the body does not earn
+2. **严重教材腔 / 翻译腔 / 鸡汤腔** — not just one stiff sentence, but a real drag on readability or trust
+3. **严重灌水** — whole paragraphs add no new information, no new judgment, and no emotional movement
+4. **严重模板化** — structure and language collapse into a replaceable template product
+5. **核心判断不成立 / 明显失焦** — the main judgment does not stand, or the article drifts off the real question
+6. **与 brief 明显冲突（含偷漂移）** — conflict with agreed direction, boundaries, or thesis
+7. **关键论证支撑不足** — core judgment lacks enough factual support, or the evidence chain breaks
+8. **推断越界 / 事实边界越界** — unsupported inference written as fact, or conclusion stronger than evidence boundary allows
+9. **作者不在场** — the text is competent, but the author never truly shows up in the argument
+10. **开头 / 结尾可替换性过高** — opening or ending reads like a generic category template rather than this article's own move
 
 ### UPGRADE_SUGGESTIONS (non-blocking by default)
 
@@ -192,14 +202,14 @@ Examples:
 
 ## Anti-Patterns
 
-- **"翻译腔":** English-mirrored syntax
-- **"鸡汤化":** Empty motivational platitudes
-- **"教材体":** Academic tone
-- **"标题党":** Title promises what article doesn't deliver
-- **"流水账":** Listing without insight
-- **"万金油文":** Article so generic it could be about any topic with minor word swaps
-- **"套路结构":** Predictable template with no structural innovation
-- **"AI高频模板句":** 高频出现 `不是……而是……`、`随着……的快速发展`、`总而言之`、`值得注意的是`、`具体而言`、`换言之`、`我们不难发现`、`由此可见`、`毫无疑问`、`不仅如此 / 更重要的是`、`底层逻辑 / 认知升级` 等；单次出现未必致命，但若依赖它们推进整篇论证，就应视作明显 AI 味
+- **翻译腔** — English-mirrored syntax
+- **鸡汤化** — empty motivational lift with no earned content
+- **教材体** — academic tone where a live voice should exist
+- **标题党** — title promises what body does not deliver
+- **流水账** — listing without a point
+- **万金油文** — article so generic it could fit almost any topic with minor substitutions
+- **套路结构** — the whole article runs on a predictable shell instead of real progression
+- **作者不在场** — facts are present, but the mind behind them never truly enters the page
 
 ## Feedback Format
 
@@ -228,6 +238,13 @@ Always return review in this structure:
     "judgment_or_edge": "the one judgment / sharp line most worth preserving",
     "paragraph_or_scene": "the screenshot-worthy paragraph or emotional scene most worth preserving, if any"
   },
+  "voice_observations": {
+    "opening_interchangeability": "low | medium | high",
+    "author_presence": "low | medium | high",
+    "transition_template_dependence": "low | medium | high",
+    "ending_sloganism": "low | medium | high",
+    "notes": "required when Voice is a material issue"
+  },
   "scores": {
     "weighted_total": 0,
     "notes": "required final gate: pass requires weighted_total >= review_pass_threshold (from config.json)"
@@ -241,23 +258,11 @@ For Voice failures, prefer a concrete `critical_issues` item like:
 
 ```json
 {
-  "type": "voice_ai_flavor",
-  "issue": "第二节连续几段都在解释概念，作者判断不在场，读起来像平台通稿",
+  "type": "voice_author_absence",
+  "issue": "第二节连续几段都在解释材料，但作者判断不在场，读起来像平台通稿",
   "quote": "relevant passage",
-  "fix_direction": "退回 Writer：把这一节开头改成一个明确判断，再接一个具体读者代价或场景",
+  "fix_direction": "退回 Writer：先重写开头，尽快落一个明确判断；再把这一节改成“判断 + 具体代价/场景 + 证据”结构",
   "penalized_dimensions": ["voice", "completion_power"]
-}
-```
-
-If a dimension score is materially relevant, you may include diagnostic score items, for example:
-
-```json
-{
-  "dimension": "title",
-  "score": 5,
-  "issue": "Title judgment is stronger than what the body can currently support",
-  "quote": "relevant passage",
-  "suggestion": "specific rewrite direction"
 }
 ```
 
@@ -265,7 +270,6 @@ If a dimension score is materially relevant, you may include diagnostic score it
 
 - NewRank 2024 Annual Report: 30.78万篇 10W+ articles (7 per 10,000)
 - 36kr/NewRank 2026 Study (7,242 accounts): 1.9% open rate, 4.3% headline, 50% completion of openers, 16.1% reads from shares
-- 南方传媒书院/澎湃 10W+ Analysis: 10 traits of viral articles
+- 南方传媒书院 / 澎湃 10W+ Analysis: 10 traits of viral articles
 - WeChat platform metrics: 完读率 avg 15-25%, emotional content 45-60%
-- Zhang Xiaolong quote: 70-80% of early OA reads from Moments shares (二八定律)
 - WeChat recommendation algorithm signals: 完读率, 分享, 点赞/在看, 收藏, 留言
