@@ -1,227 +1,125 @@
 # Quality Checks Reference
 
-Quality gates for `forge write` and `forge draft` pipelines. A gate failure blocks the pipeline — up to 2 automatic fix cycles before user notification.
+This file describes the **active** quality gates for `forge write` / `forge draft` under the OpenClaw deployment model:
 
-## Table of Contents
+- one shared GPT-5.4 model family
+- no tuning / temperature / decoding parameter strategy layer
+- no downstream humanizer after Reviewer pass
+- repo-level helpers for mechanical checks and style red lights
 
-- [Gate 1: Content Quality](#gate-1-content-quality) — CQ-01 through CQ-08
-- [Severity Levels](#severity-levels)
-- [Gate 2: Figure Quality](#gate-2-figure-quality) — FIG-01 through FIG-07
-- [Running Checks Manually](#running-checks-manually)
+The core rule is simple: **keep each gate narrow and auditable**.
 
----
+## Active Gates
 
-## Gate 1: Content Quality
+### 1. Research artifact gates
 
-### CQ-01 — Hook Strength
+Run before Writer:
 
-**What it checks:** Does the opening paragraph (first 150 characters) contain a compelling hook?
+- `outline_gate.py` checks that `outline.md` is prose-safe and free of backstage instructions
+- `validate_research_artifact.py` checks that risky claims in `research.json` have the minimum structured fact sidecar needed for attribution and preflight
 
-**Failure criteria (any one):**
-- Opens with "本文将介绍…" / "今天我们来聊…" / "随着…的发展" pattern
-- First sentence is a definition ("X是一种…")
-- No tension, question, surprising fact, or narrative by end of paragraph 1
+These gates are about **grounding and contract shape**, not voice.
 
-**Automatic fix:** Prepend a generated hook paragraph that creates tension or poses a question. Original para 1 becomes para 2.
+### 2. Writer lite preflight
 
-**Prompt injection for fix:**
-> 请为以下文章写一个开篇钩子（2-3句话）。钩子必须：提出一个让读者想继续读的问题、揭示一个反直觉的事实、或者讲述一个3秒场景。不要用定义开头，不要用"本文将介绍"。原文：[ARTICLE_EXCERPT]
+Run on the Writer draft before review:
 
-**Severity:** HIGH — fix before proceeding.
+- `writer_lite_preflight.py`
 
----
+This remains a **mechanical red-light checker only**. It may block:
 
-### CQ-02 — Word Count
+- placeholder residue
+- unsupported fake quotes
+- missing attribution for high-risk source claims
+- dynamic numbers without timestamps when evidence requires one
+- README claim overreach
+- bytes/size unit misuse
 
-**What it checks:** Article length matches the target range for the declared article type.
+It must **not** become a style scorer or human-likeness judge.
 
-**Targets:**
-| Type | Min | Max |
-|------|-----|-----|
-| 资讯 | 800 | 1500 |
-| 周报 | 1000 | 2000 |
-| 教程 | 1500 | 3000 |
-| 观点 | 1200 | 2500 |
-| 科普 | 1500 | 3000 |
+### 3. Style fingerprint lint
 
-**Failure criteria:**
-- Word count < min → **too short**
-- Word count > max → **too long**
+Run after Writer and before Reviewer:
 
-**Automatic fix (too short):** Identify the 2 shortest sections. Expand each with a concrete example, data point, or elaboration. Re-check length.
+- `style_fingerprint_lint.py <draft> --output <draft-dir>/style-lint.json`
 
-**Automatic fix (too long):** Identify the 2 longest sections. Trim redundant sentences and restate denser. Re-check length.
+This lint is the pre-review style gate. It only checks authorial red lights such as:
 
-**Severity:** MEDIUM — attempt fix. If still out of range after 2 cycles, warn user and continue.
+- `opening_interchangeability`
+- `transition_template_dependence`
+- `ending_sloganism`
+- repeated scaffold phrases
+- rhythm that is too uniform to feel authored
 
----
+If it blocks:
 
-### CQ-03 — Voice Match Score
+- the orchestrator may trigger **one** `style-only` bounce back to Writer
+- the bounce still belongs to the existing `writer` step
+- no new canonical child step may be introduced
 
-**What it checks:** The article's style matches the author's voice profile (if `agent workspace `wechat-article-writer/voice-profile.json`（例如 `/root/.openclaw/workspace-money/wechat-article-writer/voice-profile.json` 或 `/root/.openclaw/workspace-xiaolongxia/wechat-article-writer/voice-profile.json`）` exists).
+This lint does **not** score facts, citations, or review threshold pass/fail.
 
-**How it's scored (0–100):**
-- Sentence length within ±30% of profile average: +20 pts
-- Opening style matches `structure.opening_style`: +15 pts
-- Closing style matches `structure.closing_style`: +15 pts
-- At least 2 of the author's `dominant_devices` present: +20 pts
-- Formality level consistent with profile: +15 pts
-- Emoji usage consistent with profile: +15 pts
+### 4. Reviewer final gate
 
-**Failure threshold:** Score < 60
+Reviewer is the **only** scoring authority for draft acceptance.
 
-**Automatic fix:** Rephrase 3–5 representative paragraphs to match the voice profile. Inject `writing_prompt_injection` from profile and regenerate those paragraphs.
+Reviewer must:
 
-**Severity:** MEDIUM — fix if profile exists. Skip check if no profile found (warn user to run `forge voice train`).
+- score against the current rubric in `references/reviewer-rubric.md`
+- use the threshold from the active workspace `config.json`
+- explicitly judge `opening_interchangeability`, `author_presence`, `transition_template_dependence`, and `ending_sloganism`
 
----
+If the draft still needs voice cleanup, Reviewer must return `revise`. There is no post-review prose fixer.
 
-### CQ-04 — Section Balance
+### 5. Layout and lineage gate
 
-**What it checks:** No single section is disproportionately long or short relative to others.
+Layout may adapt the reviewed draft for WeChat rendering, but it may not rewrite facts, thesis, argument strength, or author voice.
 
-**Failure criteria:**
-- Any section < 100 characters (stub section)
-- Any section > 50% of total article word count
-- Standard deviation of section word counts > 2.5× the mean (extreme imbalance)
+Lineage checks must prove:
 
-**Automatic fix:**
-- Stub section: expand with 1–2 concrete examples
-- Bloated section: split into two sections with a new H2, or trim to key points
+- Reviewer-approved bytes are frozen before Layout
+- Layout consumed the exact approved draft
+- publish-time artifacts trace back to canonical child outputs
 
-**Severity:** MEDIUM
+## Explicitly Out Of Scope
 
----
+The following are **not** active quality mechanisms anymore:
 
-### CQ-05 — Chinese-First Rule
+- post-review automatic tone rewrites
+- a separate `humanizer` or `styler` child step
+- a synthetic `voice match` percentage score
+- automatic hook insertion after review
+- model-parameter tuning as a style strategy
 
-**What it checks:** No untranslated English passages longer than a phrase.
+Those approaches either blur authority boundaries or depend on knobs OpenClaw does not expose.
 
-**Failure criteria:**
-- Any consecutive run of 5+ English words that is not:
-  - A proper noun (product name, person name)
-  - A code snippet inside backticks
-  - A quoted external source
-
-**Automatic fix:** Translate offending passages into Chinese. Keep technical terms in parenthetical form: `术语（Technical Term）`.
-
-**Severity:** HIGH — must fix.
-
----
-
-### CQ-06 — Link Quality
-
-**What it checks:** Any links included in the article are valid and accessible.
-
-**How it checks:** `curl -s -o /dev/null -w "%{http_code}" <url>` for each link. Expected: 2xx or 3xx.
-
-**Failure criteria:** HTTP 4xx or 5xx response, or timeout after 5 seconds.
-
-**Automatic fix:** None — notify user with list of broken links. User must replace or remove.
-
-**Severity:** HIGH (for 4xx/5xx). LOW (for timeout — may be transient; warn and continue).
-
----
-
-### CQ-07 — 标题 (Title) Quality
-
-**What it checks:** The article title follows 公众号 best practices.
-
-**Failure criteria (any):**
-- Title > 26 characters (WeChat truncates beyond this in feed)
-- Title is all lowercase English
-- Title contains no noun or active verb (too abstract)
-- Title begins with a number that is spelled out (e.g., "三个理由" is fine; "三" alone is too vague)
-
-**Automatic fix:** Generate 3 alternative titles within constraints. Ask user to confirm one.
-
-**Severity:** HIGH — do not publish without confirming title.
-
----
-
-### CQ-08 — Duplicate Content Check
-
-**What it checks:** The draft is not too similar to an already-published article in `agent workspace `wechat-article-writer/`（例如 `/root/.openclaw/workspace-money/wechat-article-writer/` 或 `/root/.openclaw/workspace-xiaolongxia/wechat-article-writer/`）drafts/`.
-
-**How it checks:** Simple trigram overlap against all published `draft.md` files. Similarity threshold: 40%.
-
-**Failure criteria:** Trigram similarity > 40% with any published article.
-
-**Automatic fix:** None — notify user with the similar article slug. User decides whether to proceed or differentiate.
-
-**Severity:** MEDIUM — warn and pause. User must explicitly confirm to proceed.
-
-## Severity Levels
-
-| Level | Meaning | Action |
-|-------|---------|--------|
-| HIGH | Blocks publish. Auto-fix attempted; if fix fails, pause and notify user. | Must resolve |
-| MEDIUM | Should fix; attempt auto-fix. If fix fails after 2 cycles, warn and continue. | Strongly recommended |
-| LOW | Informational. | Optional |
-| INFO | Always shown; no action required. | Informational |
-
----
-
-## Gate 2: Figure Quality
-
-Checked after step 6 (figure generation), before cover image and formatting.
-
-### FIG-01 — Minimum Figure Count
-
-**What it checks:** Article contains at least 2 inline figure references (`![图`).
-
-**Severity:** HIGH — articles without figures have significantly lower engagement on WeChat.
-
-**Automatic fix:** Re-run figure generation step. If mermaid-cli fails, use ImageMagick fallback.
-
-### FIG-02 — Figure Files Exist
-
-**What it checks:** Every `![...](<path>)` in draft.md points to a file that exists and is ≥10KB.
-
-**Severity:** HIGH — missing or corrupt figures will show as broken images.
-
-### FIG-03 — Figure File Size
-
-**What it checks:** No figure PNG exceeds 2MB (WeChat CDN upload limit).
-
-**Severity:** MEDIUM — large images may fail upload or slow mobile loading.
-
-**Automatic fix:** Compress with `pngquant` or re-generate at lower resolution.
-
-### FIG-04 — Chinese Figure Captions
-
-**What it checks:** All image references use Chinese captions: `![图N：<description>]`.
-
-**Severity:** MEDIUM — uncaptioned figures look unprofessional.
-
-### FIG-05 — Source Files Preserved
-
-**What it checks:** Each figure asset has a reproducible source file when applicable.
-
-**Severity:** LOW — source files enable future edits and reproducibility.
-
-### FIG-06 — Even Distribution
-
-**What it checks:** No two figures appear within 200 characters of each other in `draft.md`.
-
-**Severity:** LOW — clustering figures disrupts reading flow.
-
-### FIG-07 — CDN URLs After Upload
-
-**What it checks:** After the publish step, all `<img src="...">` in the editor point to `mmbiz.qpic.cn` CDN URLs, not local file paths.
-
-**Severity:** HIGH — local paths will show as broken images in published articles.
-
----
-
-## Running Checks Manually
-
-You can invoke individual checks via shell during development:
+## Manual Commands
 
 ```bash
-# Word count
-wc -m draft.md
+# Mechanical draft red lights
+python scripts/writer_lite_preflight.py /path/to/draft.md --output /path/to/writer-lite-check.json
 
-# Find potential English passages
-grep -oE '[A-Za-z ]{20,}' draft.md | grep -v '`'
+# Authorial style red lights
+python scripts/style_fingerprint_lint.py /path/to/draft.md --output /path/to/style-lint.json
+
+# Research contract validation
+python scripts/validate_research_artifact.py /path/to/research.json --output /path/to/research-gate.json
+
+# Outline contract validation
+python scripts/outline_gate.py /path/to/outline.md --output /path/to/outline-gate.json
 ```
+
+## Design Principle
+
+Optimize for:
+
+- blind naturalness
+- author similarity
+- concrete paragraph density
+- reader sense that a specific author is present on the page
+
+Do **not** optimize for:
+
+- generic AI detector evasion
+- keyword blacklist gaming
+- fake persona roleplay that lives only in the prompt

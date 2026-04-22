@@ -113,6 +113,27 @@ Reason:
 5. If evidence is weak or contradictory, say so in `research.json`.
 6. Do not invent institutions, dates, figures, or publication names.
 
+## Style sidecar rules
+
+If the selected profile or workspace has usable historical author material, Researcher should prepare a **small style sidecar** inside `research.json`.
+
+Allowed fields:
+- `style_exemplar_pack`
+- `anti_exemplars`
+- `entity_alias_map`
+- `must_attribute_claims`
+- `title_directions`
+- `angle_risks`
+
+Rules:
+1. Keep each exemplar short and functional. A sentence or short paragraph is enough.
+2. Do not paste entire historical articles.
+3. Do not dump raw workspace persona files (`SOUL.md`, `AGENTS.md`, `MEMORY.md`) into the artifact.
+4. `style_exemplar_pack` is for openings, turns, endings, explanation moves, and judgment moves.
+5. `anti_exemplars` should capture what would make this article sound templated, translational, platform-generic, or unlike the target author.
+6. `entity_alias_map` should preserve consistent naming for products, people, companies, and nicknames that the author regularly uses.
+7. `must_attribute_claims` should mark claims that cannot be safely converted into unattributed narrator voice.
+
 ## Minimal source strategy
 
 Recommended practical order:
@@ -134,6 +155,13 @@ Should include at minimum:
 - `hot_hook` (what current event / keyword / product / controversy is serving as entrypoint, if any)
 - `search_keywords` (the actual terms that should naturally surface in title / lead)
 - a **minimal structured fact sidecar** for high-risk claims (recommended field: `fact_records`)
+- optional style sidecar fields:
+  - `style_exemplar_pack`
+  - `anti_exemplars`
+  - `entity_alias_map`
+  - `must_attribute_claims`
+  - `title_directions`
+  - `angle_risks`
 
 For `fact_records`, at minimum support these cases when applicable:
 - `kind: "api_snapshot"` → must include `observed_at`

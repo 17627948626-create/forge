@@ -1,24 +1,67 @@
 # Data Layout & Schemas
 
+This skill is designed for **direct OpenClaw consumption**.
+
+The shared repo owns:
+- prompt contracts
+- artifact schemas
+- helper scripts
+- fallback defaults
+
+The workspace owns:
+- concrete account persona
+- long-term memory
+- operating preferences
+- historical article corpus
+
+Do **not** treat workspace persona files as shared repo interfaces. Compile them into `voice-pack.json` / `voice-profile.json`, then let the skill consume those compiled assets.
+
 ## Directory Structure
 
-```
-agent workspace `wechat-article-writer/`（例如 `/root/.openclaw/workspace-money/wechat-article-writer/` 或 `/root/.openclaw/workspace-xiaolongxia/wechat-article-writer/`）
-├── config.json              # User configuration (global defaults; no implicit default公众号 routing)
-├── profiles.json            # Multi-account profile registry
-├── published-log.jsonl      # 《不上班也有Money》发布台账
-├── published-logs/          # Optional per-profile publish logs
-├── voice-profile.json       # Writing style profile (from forge voice train)
-├── session.json             # Current active session (topic handoff)
-└── drafts/
-    └── <slug-YYYYMMDD>/
-        ├── meta.json        # Status, title, type, timestamps
-        ├── pipeline-state.json  # Compaction-safe state machine
-        ├── outline.md       # Section outline
-        ├── research.json    # Internal research bundle for grounding/checking (Step 1, not for article output)
-        ├── draft.md         # Raw Markdown draft (+ draft-v2.md, v3, ...)
-        ├── review-v1.json   # Reviewer scores (+ v2, v3, ...)
-        └── formatted.html   # WeChat HTML
+```text
+/root/.openclaw/skills/wechat-article-forge/
+├── SKILL.md
+├── skill.yml
+├── references/
+│   ├── default-voice-pack.json
+│   ├── default-voice-profile.json
+│   ├── voice-pack-schema.json
+│   └── voice-profile-schema.json
+└── scripts/
+    ├── build_voice_pack.py
+    ├── resolve_voice_assets.py
+    └── style_fingerprint_lint.py
+
+/root/.openclaw/workspace-<account>/
+├── SOUL.md                  # private persona source material
+├── AGENTS.md                # private agent behavior/source material
+├── MEMORY.md                # private long-term memory/source material
+├── published/               # optional historical article corpus
+└── wechat-article-writer/
+    ├── config.json
+    ├── profiles.json
+    ├── published-log.jsonl
+    ├── published-logs/
+    ├── voice-pack.json      # workspace-level compiled author asset
+    ├── voice-profile.json   # workspace-level fallback summary
+    ├── session.json
+    └── drafts/
+        └── <slug-YYYYMMDD>/
+            ├── meta.json
+            ├── pipeline-state.json
+            ├── outline.md
+            ├── outline-gate.json
+            ├── research.json
+            ├── research-gate.json
+            ├── writer-lite-brief.json
+            ├── writer-lite-check.json
+            ├── style-lint.json
+            ├── draft.md
+            ├── draft-v2.md
+            ├── review-v1.json
+            ├── final-layout.md
+            ├── publish.md
+            └── formatted.html
 ```
 
 ## Slug Generation
@@ -51,11 +94,11 @@ agent workspace `wechat-article-writer/`（例如 `/root/.openclaw/workspace-mon
 
 Handoff: `forge topic` writes → `forge write`/`forge draft` reads (expires after 24h).
 
-## config.json
+## `config.json`
 
 ```json
 {
-  "profiles_path": "agent workspace `wechat-article-writer/`（例如 `/root/.openclaw/workspace-money/wechat-article-writer/` 或 `/root/.openclaw/workspace-xiaolongxia/wechat-article-writer/`）profiles.json",
+  "profiles_path": "/root/.openclaw/workspace-xiaolongxia/wechat-article-writer/profiles.json",
   "default_theme": "sspai",
   "default_article_type": "观点",
   "auto_publish_types": [],
@@ -64,7 +107,7 @@ Handoff: `forge topic` writes → `forge write`/`forge draft` reads (expires aft
   "cover_fallback_url": "https://picsum.photos/1200/800",
   "review_pass_threshold": "<single authority value from active config>",
   "wechat_author": "",
-  "wechat_secrets_path": "agent workspace `wechat-article-writer/`（例如 `/root/.openclaw/workspace-money/wechat-article-writer/` 或 `/root/.openclaw/workspace-xiaolongxia/wechat-article-writer/`）secrets.json",
+  "wechat_secrets_path": "/root/.openclaw/workspace-xiaolongxia/wechat-article-writer/secrets.json",
   "published_log_path": "",
   "writer_model": "",
   "word_count_targets": {
@@ -90,32 +133,22 @@ Handoff: `forge topic` writes → `forge write`/`forge draft` reads (expires aft
 - `review_pass_threshold`：**唯一权威的评分通过门槛数字**。Reviewer 是否通过、自动 revise 是否继续，都只认这个字段；其他文档不得再写死具体数字
 - `writer_model`：只作为 Writer 子代理（Step 2 初稿 + Step 4 改稿）的**可选覆盖字段**；由 Orchestrator 在 `sessions_spawn` 时显式传入 `model`。若为空，则 Writer 默认继承父级/主会话模型
 - `wechat_author` / `published_log_path`（顶层 config）：仅保留给历史兼容读取；**新写路径不得**把它们当成 profile 缺失时的静默 fallback
+- `profiles_path`：OpenClaw workspace 内的 profile registry。`write` / `draft` / `publish` 路由必须以它为准
 
-## profiles.json（可选，多公众号）
+## `profiles.json`
 
-当你需要一套 forge 同时服务多个公众号时，新增 `profiles.json`，并用**实际公众号名称**作为 key。`write` / `draft` / `publish` 时必须显式指定其中一个名称；**不再允许默认号**。
+`profiles.json` is the profile registry and the **first-class hook** for account-specific compiled voice assets.
 
 ```json
 {
   "profiles": {
-    "不上班也有Money": {
-      "label": "不上班也有Money",
-      "wechat_author": "不上班也有Money",
-      "default_theme": "sspai",
-      "cover_style": "unsplash_search",
-      "cover_fallback_url": "https://picsum.photos/1200/800",
-      "wechat_secrets_path": "agent workspace `wechat-article-writer/`（例如 `/root/.openclaw/workspace-money/wechat-article-writer/` 或 `/root/.openclaw/workspace-xiaolongxia/wechat-article-writer/`）secrets.json",
-      "published_log_path": "agent workspace `wechat-article-writer/`（例如 `/root/.openclaw/workspace-money/wechat-article-writer/` 或 `/root/.openclaw/workspace-xiaolongxia/wechat-article-writer/`）published-log.jsonl",
-      "publisher": {
-        "mcp_server": "wenyan-mcp",
-        "mcp_config_file": "~/.openclaw/mcp.json"
-      }
-    },
     "小龙虾有话说": {
       "label": "小龙虾有话说",
       "wechat_author": "小龙虾有话说",
       "default_theme": "sspai",
       "published_log_path": "/root/.openclaw/workspace-xiaolongxia/wechat-article-writer/published-logs/xiaolongxia-youhuashuo.jsonl",
+      "voice_pack_path": "/root/.openclaw/workspace-xiaolongxia/wechat-article-writer/voice-pack.json",
+      "voice_profile_path": "/root/.openclaw/workspace-xiaolongxia/wechat-article-writer/voice-profile.json",
       "publisher": {
         "mcp_server": "wenyan-mcp-alt",
         "mcp_config_file": "~/.openclaw/mcp-alt.json"
@@ -124,6 +157,58 @@ Handoff: `forge topic` writes → `forge write`/`forge draft` reads (expires aft
   }
 }
 ```
+
+### Profile-specific voice asset fields
+
+- `voice_pack_path`: optional absolute or `~`-expanded path to the preferred compiled `voice-pack.json`
+- `voice_profile_path`: optional absolute or `~`-expanded path to the fallback `voice-profile.json`
+
+These fields let a single workspace host multiple accounts without forcing them to share one writer voice asset.
+
+## Voice Asset Resolution Order
+
+Resolve voice assets in this exact order:
+
+1. `profiles.json.voice_pack_path`
+2. `profiles.json.voice_profile_path`
+3. workspace `voice-pack.json`
+4. workspace `voice-profile.json`
+5. skill `references/default-voice-pack.json`
+6. skill `references/default-voice-profile.json`
+
+Use `scripts/resolve_voice_assets.py` when choosing the effective asset.
+
+Interpretation rules:
+- source specificity beats genericity
+- within the same source, `voice-pack.json` beats `voice-profile.json`
+- `voice-profile.json` is a fallback summary, not the primary authorial asset
+
+## `forge voice train` Outputs
+
+`forge voice train` should compile workspace persona and article evidence into:
+
+- `voice-pack.json`: primary concrete author asset for Writer/Reviewer
+- `voice-profile.json`: fallback diagnostic/summary asset for compatibility and observability
+
+The training input may read:
+- published article markdown
+- approved historical drafts
+- private persona sources such as `SOUL.md`, `AGENTS.md`, `MEMORY.md`
+
+The training output must **not** embed entire historical articles or raw persona files verbatim. It should extract short functional fragments and boundaries.
+
+## `research.json` Sidecar Fields
+
+Beyond thesis/evidence/source data, `research.json` may contain:
+
+- `style_exemplar_pack`: short profile-specific openings / turns / endings for Writer inspiration
+- `anti_exemplars`: short negative examples that sound too templated or off-voice
+- `entity_alias_map`: canonical-name map for entities that should be referred to consistently
+- `must_attribute_claims`: claims that must retain explicit attribution in the draft
+- `title_directions`: candidate title directions rather than one fixed title
+- `angle_risks`: ways the chosen angle can drift into cliché, hype, or overclaiming
+
+## Legacy Compatibility Notes
 
 **建议的覆盖优先级：**
 1. 显式命令参数（尤其是用户明确指定的公众号名称或 theme）

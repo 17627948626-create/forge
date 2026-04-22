@@ -50,6 +50,14 @@ For publish-time human handoff (`safe_check`, `login_scan`, `boss_confirm`), `pi
       "action": "rerun_preflight"
     }
   },
+  "style_lint": {
+    "artifact": "/root/.openclaw/workspace/wechat-article-writer/drafts/growth-mindset-ai-20260219/style-lint.json",
+    "draft_file": "draft-v3.md",
+    "draft_sha256": "abc123",
+    "status": "pass",
+    "bounce_count": 0,
+    "blocking_codes": []
+  },
   "subagent_label": "reviewer-growth-mindset-v3",
   "subagent_status": "pending",
   "pending_action": "spawn_reviewer",
@@ -227,12 +235,13 @@ Do **not** overload `pending_action` with user-facing verbs like `safe_check_sca
 | `lite_preflight.previous_check_*` | The stale/previous canonical check identity seen before rerun or waiver handling |
 | `lite_preflight.latest_check_*` | Canonical `writer-lite-check.json` identity currently bound (or stale) |
 | `lite_preflight.waiver` | Explicit waiver payload when rerun is intentionally skipped |
-| `children` | Per-step child-session evidence: `session_key`, `label`, `model`, `status`, `artifacts`. Active canonical steps are `researcher`, `writer`, `reviewer`, `layout`; `humanizer` is legacy read-only and must not be written by new runs. |
+| `children` | Per-step child-session evidence: `session_key`, `label`, `model`, `status`, `artifacts`. Active canonical steps are `researcher`, `writer`, `reviewer`, `layout`; `style_lint` is an inline gate and must **not** be written as a child step. `humanizer` is legacy read-only and must not be written by new runs. |
 | `artifact_provenance` | Per-artifact producer record; publish audit requires `producer_type=child`, correct active `producer_step`, `session_key`, and `model` |
 | `reviewed_draft_file` / `reviewed_draft_sha256` | Reviewer-approved draft identity, recorded at Reviewer pass time. This draft is the final body authority after Reviewer pass, and audit must verify these fields instead of minting them from current disk bytes. |
 | `content_finalized_by` / `content_final_artifact` | Must be `reviewer` and the same reviewed draft file for active runs. |
 | `layout_input_file` / `layout_input_sha256` | Exact reviewed draft consumed by Layout. Publish audit fails closed if these are missing or do not match. |
 | `layout_output_file` | Layout artifact, normally `final-layout.md`. |
+| `style_lint` | Pre-review authorial lint state. Must record the current lint artifact, the exact draft identity it evaluated, the current `status` (`pass` / `blocked` / `waived`), and `bounce_count` (max 1 before first review). |
 | `waiting_for` | Human-side wait target, e.g. `boss_scan`, `boss_confirm` |
 | `required_user_action` | Human action verb, e.g. `safe_check_scan`, `login_scan`, `boss_confirm` |
 | `safe_check_qr_path` | Stable local QR/evidence path for the current blocked event; may be `null` for non-QR confirmations |

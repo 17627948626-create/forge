@@ -95,232 +95,253 @@
       "id": "write-en-001",
       "group": "forge-write",
       "polarity": "positive",
-      "utterance": "forge article about the best AI tools in 2024",
+      "utterance": "forge write the best AI tools in 2024 for 小龙虾有话说",
       "expected_mode": "write",
       "expected_slot": {
-        "subject": "the best AI tools in 2024"
+        "subject": "the best AI tools in 2024",
+        "profile": "小龙虾有话说"
       },
-      "notes": "English primary trigger"
+      "notes": "English primary trigger with explicit profile"
     },
     {
       "id": "write-en-002",
       "group": "forge-write",
       "polarity": "positive",
-      "utterance": "forge write about React Server Components",
+      "utterance": "forge write about React Server Components for 不上班也有Money",
       "expected_mode": "write",
       "expected_slot": {
-        "subject": "React Server Components"
+        "subject": "React Server Components",
+        "profile": "不上班也有Money"
       },
-      "notes": "English verb+about form"
+      "notes": "English verb+about form with explicit profile"
     },
     {
       "id": "write-en-003",
       "group": "forge-write",
       "polarity": "positive",
-      "utterance": "write a wechat article about open source LLMs",
+      "utterance": "write a wechat article about open source LLMs for 小龙虾有话说",
       "expected_mode": "write",
       "expected_slot": {
-        "subject": "open source LLMs"
+        "subject": "open source LLMs",
+        "profile": "小龙虾有话说"
       },
-      "notes": "Full English phrasing"
+      "notes": "Full English phrasing with explicit profile"
     },
     {
       "id": "write-en-004",
       "group": "forge-write",
       "polarity": "positive",
-      "utterance": "create wechat article on vector databases",
+      "utterance": "create wechat article on vector databases for 不上班也有Money",
       "expected_mode": "write",
       "expected_slot": {
-        "subject": "vector databases"
+        "subject": "vector databases",
+        "profile": "不上班也有Money"
       },
-      "notes": "Alternate English verb"
+      "notes": "Alternate English verb with explicit profile"
     },
     {
       "id": "write-zh-001",
       "group": "forge-write",
       "polarity": "positive",
-      "utterance": "帮我写公众号文章：Rust异步编程",
+      "utterance": "给不上班也有Money写公众号文章：Rust异步编程",
       "expected_mode": "write",
       "expected_slot": {
-        "subject": "Rust异步编程"
+        "subject": "Rust异步编程",
+        "profile": "不上班也有Money"
       },
-      "notes": "Chinese primary trigger with colon"
+      "notes": "Chinese primary trigger with explicit profile"
     },
     {
       "id": "write-zh-002",
       "group": "forge-write",
       "polarity": "positive",
-      "utterance": "写一篇关于AI画图工具的公众号",
+      "utterance": "写一篇关于AI画图工具的公众号，发到小龙虾有话说",
       "expected_mode": "write",
       "expected_slot": {
-        "subject": "AI画图工具"
+        "subject": "AI画图工具",
+        "profile": "小龙虾有话说"
       },
-      "notes": "Chinese narrative form"
+      "notes": "Chinese narrative form with explicit profile"
     },
     {
       "id": "write-zh-003",
       "group": "forge-write",
       "polarity": "positive",
-      "utterance": "全流程写作本周大模型进展",
+      "utterance": "全流程写作本周大模型进展发到小龙虾有话说",
       "expected_mode": "write",
       "expected_slot": {
-        "subject": "本周大模型进展"
+        "subject": "本周大模型进展",
+        "profile": "小龙虾有话说"
       },
-      "notes": "Chinese explicit full-pipeline trigger"
+      "notes": "Chinese explicit full-pipeline trigger with profile"
     },
     {
       "id": "write-zh-004",
       "group": "forge-write",
       "polarity": "positive",
-      "utterance": "帮我写公众号：Claude 3发布了什么新功能",
+      "utterance": "写公众号文章Claude 3发布了什么新功能发到不上班也有Money",
       "expected_mode": "write",
       "expected_slot": {
-        "subject": "Claude 3发布了什么新功能"
+        "subject": "Claude 3发布了什么新功能",
+        "profile": "不上班也有Money"
       },
-      "notes": "Chinese abbreviated form, question-style subject"
+      "notes": "Chinese abbreviated form with explicit profile"
     },
     {
       "id": "draft-en-001",
       "group": "forge-draft",
       "polarity": "positive",
-      "utterance": "forge draft about Python 3.13 new features",
+      "utterance": "forge draft about Python 3.13 new features for 小龙虾有话说",
       "expected_mode": "draft",
       "expected_slot": {
-        "subject": "Python 3.13 new features"
+        "subject": "Python 3.13 new features",
+        "profile": "小龙虾有话说"
       },
-      "notes": "English primary trigger"
+      "notes": "English primary trigger with explicit profile"
     },
     {
       "id": "draft-en-002",
       "group": "forge-draft",
       "polarity": "positive",
-      "utterance": "draft a wechat article about vector databases",
+      "utterance": "draft a wechat article about vector databases for 不上班也有Money",
       "expected_mode": "draft",
       "expected_slot": {
-        "subject": "vector databases"
+        "subject": "vector databases",
+        "profile": "不上班也有Money"
       },
-      "notes": "English full phrasing"
+      "notes": "English full phrasing with explicit profile"
     },
     {
       "id": "draft-en-003",
       "group": "forge-draft",
       "polarity": "positive",
-      "utterance": "write wechat draft about Kubernetes best practices",
+      "utterance": "write wechat draft about Kubernetes best practices for 小龙虾有话说",
       "expected_mode": "draft",
       "expected_slot": {
-        "subject": "Kubernetes best practices"
+        "subject": "Kubernetes best practices",
+        "profile": "小龙虾有话说"
       },
-      "notes": "English write+draft form"
+      "notes": "English write+draft form with explicit profile"
     },
     {
       "id": "draft-zh-001",
       "group": "forge-draft",
       "polarity": "positive",
-      "utterance": "帮我起草公众号文章：本周AI新闻",
+      "utterance": "给小龙虾有话说起草公众号文章：本周AI新闻",
       "expected_mode": "draft",
       "expected_slot": {
-        "subject": "本周AI新闻"
+        "subject": "本周AI新闻",
+        "profile": "小龙虾有话说"
       },
-      "notes": "Chinese 起草 form"
+      "notes": "Chinese 起草 form with explicit profile"
     },
     {
       "id": "draft-zh-002",
       "group": "forge-draft",
       "polarity": "positive",
-      "utterance": "只写草稿，不发布：开源大模型对比",
+      "utterance": "只写草稿开源大模型对比发到不上班也有Money",
       "expected_mode": "draft",
       "expected_slot": {
-        "subject": "开源大模型对比"
+        "subject": "开源大模型对比",
+        "profile": "不上班也有Money"
       },
-      "notes": "Chinese explicit no-publish instruction"
+      "notes": "Chinese draft-only form with explicit profile"
     },
     {
       "id": "draft-zh-003",
       "group": "forge-draft",
       "polarity": "positive",
-      "utterance": "起草一篇关于Claude 3的公众号",
+      "utterance": "起草一篇关于Claude 3的公众号，发到小龙虾有话说",
       "expected_mode": "draft",
       "expected_slot": {
-        "subject": "Claude 3"
+        "subject": "Claude 3",
+        "profile": "小龙虾有话说"
       },
-      "notes": "Chinese 起草+关于 form"
+      "notes": "Chinese 起草+关于 form with explicit profile"
     },
     {
       "id": "draft-zh-004",
       "group": "forge-draft",
       "polarity": "positive",
-      "utterance": "写草稿MCP协议详解",
+      "utterance": "写草稿MCP协议详解发到不上班也有Money",
       "expected_mode": "draft",
       "expected_slot": {
-        "subject": "MCP协议详解"
+        "subject": "MCP协议详解",
+        "profile": "不上班也有Money"
       },
-      "notes": "Chinese minimal form"
+      "notes": "Chinese minimal form with explicit profile"
     },
     {
       "id": "publish-en-001",
       "group": "forge-publish",
       "polarity": "positive",
-      "utterance": "forge publish ai-tools-20240217",
+      "utterance": "forge publish ai-tools-20240217 for 不上班也有Money",
       "expected_mode": "publish",
       "expected_slot": {
-        "draft_id": "ai-tools-20240217"
+        "draft_id": "ai-tools-20240217",
+        "profile": "不上班也有Money"
       },
-      "notes": "English primary trigger with slug"
+      "notes": "English primary trigger with explicit profile"
     },
     {
       "id": "publish-en-002",
       "group": "forge-publish",
       "polarity": "positive",
-      "utterance": "publish draft tech-weekly-20240215",
+      "utterance": "publish draft tech-weekly-20240215 for 小龙虾有话说",
       "expected_mode": "publish",
       "expected_slot": {
-        "draft_id": "tech-weekly-20240215"
+        "draft_id": "tech-weekly-20240215",
+        "profile": "小龙虾有话说"
       },
-      "notes": "English 'publish draft' form"
+      "notes": "English 'publish draft' form with explicit profile"
     },
     {
       "id": "publish-en-003",
       "group": "forge-publish",
       "polarity": "positive",
-      "utterance": "send wechat draft rust-async-20240210",
+      "utterance": "send wechat draft rust-async-20240210 to 小龙虾有话说",
       "expected_mode": "publish",
       "expected_slot": {
-        "draft_id": "rust-async-20240210"
+        "draft_id": "rust-async-20240210",
+        "profile": "小龙虾有话说"
       },
-      "notes": "English 'send wechat draft' variant"
+      "notes": "English 'send wechat draft' variant with explicit profile"
     },
     {
       "id": "publish-zh-001",
       "group": "forge-publish",
       "polarity": "positive",
-      "utterance": "发布草稿 ai-tools-20240217",
+      "utterance": "发布草稿ai-tools-20240217到不上班也有Money",
       "expected_mode": "publish",
       "expected_slot": {
-        "draft_id": "ai-tools-20240217"
+        "draft_id": "ai-tools-20240217",
+        "profile": "不上班也有Money"
       },
-      "notes": "Chinese with space separator"
+      "notes": "Chinese publish form with explicit profile"
     },
     {
       "id": "publish-zh-002",
       "group": "forge-publish",
       "polarity": "positive",
-      "utterance": "发布ai-tools-20240217",
+      "utterance": "发布tech-weekly-20240215到小龙虾有话说",
       "expected_mode": "publish",
       "expected_slot": {
-        "draft_id": "ai-tools-20240217"
+        "draft_id": "tech-weekly-20240215",
+        "profile": "小龙虾有话说"
       },
-      "notes": "Chinese minimal form"
+      "notes": "Chinese minimal publish form with explicit profile"
     },
     {
       "id": "publish-zh-003",
       "group": "forge-publish",
       "polarity": "positive",
-      "utterance": "推送草稿tech-weekly-20240215",
+      "utterance": "推送草稿rust-async-20240210到不上班也有Money",
       "expected_mode": "publish",
       "expected_slot": {
-        "draft_id": "tech-weekly-20240215"
+        "draft_id": "rust-async-20240210",
+        "profile": "不上班也有Money"
       },
-      "notes": "Chinese 推送 variant"
+      "notes": "Chinese 推送 variant with explicit profile"
     },
     {
       "id": "voice-en-001",
@@ -558,6 +579,22 @@
       "utterance": "发布我的博客",
       "expected_mode": null,
       "notes": "Chinese 发布 but generic blog, no draft-id — ambiguous; should prompt for ID or route to blog-writer"
+    },
+    {
+      "id": "neg-018",
+      "group": "negative",
+      "polarity": "negative",
+      "utterance": "forge write about React Server Components",
+      "expected_mode": null,
+      "notes": "Missing explicit profile should not fully trigger write routing"
+    },
+    {
+      "id": "neg-019",
+      "group": "negative",
+      "polarity": "negative",
+      "utterance": "forge publish ai-tools-20240217",
+      "expected_mode": null,
+      "notes": "Missing explicit profile should not fully trigger publish routing"
     },
     {
       "id": "neg-017",

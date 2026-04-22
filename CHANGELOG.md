@@ -1,3 +1,17 @@
+## v2.5.0 — 2026-04-22
+
+### Added
+- `scripts/build_voice_pack.py` to compile `voice-pack.json` plus fallback `voice-profile.json`
+- `scripts/resolve_voice_assets.py` to apply OpenClaw-aware voice asset fallback order
+- `scripts/style_fingerprint_lint.py` plus `style-lint.json` artifact contract
+- `references/voice-train-prompt.md` for the new voice asset training contract
+
+### Changed
+- Skill and reference docs now treat this repo as an OpenClaw skill base, with persona kept in workspace materials and compiled into voice assets
+- Writer flow now documents the pre-review style lint and one-bounce style-only correction path
+- `data-layout`, `pipeline-state`, `templates`, and `quality-checks` now reflect `voice-pack`-first routing and Reviewer finality
+- `default-voice-profile.json` and `voice-profile-schema.json` are now explicitly fallback/diagnostic assets
+
 ## v2.4.1 — 2026-03-01
 
 ### Fixed

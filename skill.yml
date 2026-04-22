@@ -1,12 +1,13 @@
 display_name: "WeChat Article Writer"
 name: wechat-article-writer
-version: 2.4.1
+version: 2.5.0
 permissions:
   - exec: bun (JS runtime for bundled baoyu renderer)
+  - exec: python3 (voice-pack build, asset resolution, style lint, preflight helpers)
   - exec: curl (bun installation if not present)
   - exec: git, gh CLI (optional — for source repo operations)
   - filesystem: read/write /root/.openclaw/workspace/wechat-article-writer/ (drafts, config)
-description: End-to-end 微信公众号 article writing and publishing pipeline. For write/draft/publish actions, the user must explicitly specify the target公众号名称; never use a default account.
+description: End-to-end 微信公众号 article writing and publishing pipeline for direct OpenClaw use. Uses compiled voice assets (`voice-pack.json` first, `voice-profile.json` fallback), keeps persona in the workspace layer, and requires the user to explicitly specify the target公众号名称 for write/draft/publish actions.
 
 triggers:
   # ── forge topic ──────────────────────────────────────────────────────────────
@@ -114,10 +115,12 @@ triggers:
       - "forge voice train"
       - "train my wechat writing voice"
       - "analyze my writing style for wechat"
+      - "build voice pack from my articles"
       - "build voice profile from my articles"
     examples:
       - "forge voice train"
       - "train my wechat writing voice"
+      - "build voice pack from my articles"
 
   - id: forge-voice-train-zh
     mode: voice
@@ -126,10 +129,12 @@ triggers:
       - "分析我的写作风格"
       - "分析我的公众号风格"
       - "建立声音档案"
+      - "建立voice pack"
       - "forge voice train"
     examples:
       - "训练我的写作风格"
       - "分析我的公众号风格"
+      - "建立voice pack"
 
   # ── forge status ──────────────────────────────────────────────────────────────
   - id: forge-status-en

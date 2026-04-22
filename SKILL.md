@@ -68,7 +68,7 @@ Orchestrator creates the slug/draft directory and initial `pipeline-state.json`,
    - **Mechanical gate before Writer:** run `python /root/.openclaw/skills/wechat-article-forge/scripts/outline_gate.py <draft-dir>/outline.md --output <draft-dir>/outline-gate.json` and fail closed if it reports backstage cues.
 6. **Persist:** Researcher saves `research.json` and `outline.md` before final answer.
    - For high-risk facts, `research.json` should also carry a minimal structured sidecar (recommended: `fact_records`) so Writer + lite preflight can distinguish `api_snapshot`, `paraphrase_only` / `verbatim`, `readme_claim`, and `file_size_bytes` cases.
-   - Researcher should also write a **small style-aware sidecar** when voice assets are available or can be derived: recommended fields are `style_exemplar_pack`, `anti_exemplars`, `title_directions`, `angle_risks`. This pack must contain **short functional examples**, not entire historical articles.
+   - Researcher should also write a **small style-aware sidecar** when voice assets are available or can be derived. Recommended fields are `style_exemplar_pack`, `anti_exemplars`, `entity_alias_map`, `must_attribute_claims`, `title_directions`, `angle_risks`. This pack must contain **short functional examples**, not entire historical articles and not raw `SOUL.md` / `AGENTS.md` / `MEMORY.md` dumps.
    - **Mechanical gate before Writer:** run `python /root/.openclaw/skills/wechat-article-forge/scripts/validate_research_artifact.py <draft-dir>/research.json --output <draft-dir>/research-gate.json` and fail closed if high-risk claims lack structured fact records.
 7. **Prompt policy:** Researcher must follow `references/researcher-prompt.md`, especially the validated search stack / avoid-list rules.
 
@@ -77,10 +77,11 @@ See `references/researcher-prompt.md` for the detailed, validated search policy.
 ### Steps 2-4: Write → Review → Revise
 
 - **Step 2 (Write):** Chinese-first draft anchored to `research.json`. Each section adds a distinct idea backed by evidence. When spawning the Writer child (`runTimeoutSeconds: 3600`), read `writer_model` from `<workspace>/wechat-article-writer/config.json` as an **optional override only**. If `writer_model` is empty / omitted, Step 2 / Step 4 Writer must simply **inherit the parent/main session model**.
-- **Writer input contract (new default):** Initial drafting should rely on the current topic, `writer-lite-brief.json`, `research.json`, `outline.md`, plus the strongest available voice asset in this order: `voice-pack.json` → `voice-profile.json` → default fallback asset. `voice-pack.json` is the preferred asset because it contains concrete author evidence (openings, turns, endings, sharp lines, anti-patterns, persona boundary). `voice-profile.json` remains a fallback / diagnostic summary.
+- **Writer input contract (new default):** Initial drafting should rely on the current topic, `writer-lite-brief.json`, `research.json`, `outline.md`, plus the strongest available voice asset resolved in this exact order: `profiles.json.voice_pack_path` → `profiles.json.voice_profile_path` → workspace `voice-pack.json` → workspace `voice-profile.json` → `references/default-voice-pack.json` → `references/default-voice-profile.json`. Within each source, `voice-pack.json` is preferred because it contains concrete author evidence (openings, turns, endings, sharp lines, anti-patterns, persona boundary). Use `scripts/resolve_voice_assets.py` when the source order is ambiguous.
 - **Allowed style evidence:** compact `style_exemplar_pack` and `anti_exemplars` may be injected into the Writer prompt when they are explicitly derived from the selected profile / account's past writing and stored as short functional examples. **Do not inject full historical top articles or raw prior high-score article packs into the Writer prompt.** The rule is: learn the author's moves, not copy entire old articles. See `references/writer-prompt.md`.
 - **Authoring responsibility:** Writer owns the article's human-likeness from the first draft onward. In the active pipeline there is **no downstream Humanizer**. Writer must internally perform: factual skeleton → authorial rewrite → candidate selection for opening / ending / title direction.
 - **Writer execution path:** Keep the Writer child/session boundary exactly as-is, but generate正文 through the Writer subagent itself. The active forge flow has **no CLI writer path and no separate API writer executor path**. Writer / Revise are ordinary subagent steps like Researcher / Reviewer / Layout. Do **not** move正文 generation back to the parent orchestrator.
+- **Pre-review style lint (inline gate, not a child step):** After every Writer draft and before every Reviewer spawn, run `python /root/.openclaw/skills/wechat-article-forge/scripts/style_fingerprint_lint.py <draft-path> --output <draft-dir>/style-lint.json`. This lint only checks authorial red lights such as `opening_interchangeability`, `transition_template_dependence`, `ending_sloganism`, repeated scaffold phrases, and overly uniform rhythm. If it blocks, the orchestrator may trigger **one** `style-only` Writer bounce before the first review. Track this under `pipeline-state.json.style_lint`; do **not** mint a new canonical child step.
 - **Step 3 (Review):** Reviewer is the primary adjudicator and uses a **single scoring gate**. Severe issues are expressed as score damage plus `critical_issues`, not as a separate blocker gate. The threshold number is **not duplicated in this skill**: the sole authority is `/root/.openclaw/workspace-xiaolongxia/wechat-article-writer/config.json` → `review_pass_threshold`. The reviewer must always output `weighted_total` in decision rounds, and must explicitly evaluate `opening_interchangeability`, `author_presence`, `transition_template_dependence`, and `ending_sloganism`. Spawn Reviewer child with `runTimeoutSeconds: 3600`. See `references/reviewer-rubric.md`.
 - **Post-review freeze:** once Reviewer returns pass for the latest draft, that draft is the final body. If it still needs a downstream tone-cleaning pass to be publishable, Reviewer must return revise. No post-review prose rewriter exists in the active pipeline.
 - **Step 4 (Revise):** Max **2** automated Writer→Reviewer rounds. Spawn each Writer revision child with `runTimeoutSeconds: 3600`. **Every revise round must use a newly spawned independent Writer subagent; never reuse the previous Writer session for continuing edits.** Continue revising while `weighted_total` is below the effective `review_pass_threshold` from `config.json` and `revision_cycle < 2`. If the second revise still fails, stop extending the same branch and restart from a **fresh first-draft branch** using the locked topic / brief / research pack.
@@ -101,8 +102,10 @@ Layout **没有文风权，也没有改论权**：若文风、逻辑、事实有
 
 - **Concrete author evidence beats abstract style description.** When both exist, prefer `voice-pack.json` over `voice-profile.json`.
 - **Compact exemplars are allowed; raw historical article stuffing is not.** Exemplars must be short, functional, and profile-specific.
+- **Workspace persona stays private to the workspace.** `SOUL.md`, `AGENTS.md`, `MEMORY.md`, and other account-specific persona materials are source material for `forge voice train`, not direct Writer prompt payloads for the shared repo skill.
 - **Reviewer judges author presence, not only banned phrase count.** Avoid turning human-likeness into a pure blacklist game.
 - **Mechanical preflight stays mechanical.** `writer_lite_preflight.py` only checks finite red lights; it must not evolve into a style judge.
+- **Style lint stays style-only.** `style_fingerprint_lint.py` may block template-sounding prose, but it must not score facts, provenance, or policy compliance.
 - **Layout cannot rescue weak voice.** If the article still sounds generic after review, the pipeline must go back to Writer.
 
 ---
@@ -154,9 +157,11 @@ Configure via `/root/.openclaw/workspace-xiaolongxia/wechat-article-writer/confi
 | `word_count_targets` | See defaults | Min/max word counts per article type |
 
 Voice assets live in the article workspace and are account-specific whenever possible:
-- `voice-pack.json` — preferred, concrete author evidence
-- `voice-profile.json` — fallback summary / diagnostic asset
-- `default-voice-pack.json` / `default-voice-profile.json` — last resort fallback assets
+- `profiles.json.voice_pack_path` / `profiles.json.voice_profile_path` — profile-specific compiled assets
+- workspace `voice-pack.json` / `voice-profile.json` — workspace-level compiled assets
+- `default-voice-pack.json` / `default-voice-profile.json` — last resort fallback assets shipped with the skill
+
+OpenClaw workspace persona materials such as `SOUL.md`, `AGENTS.md`, and `MEMORY.md` remain **outside** the shared repo contract. They should be compiled into `voice-pack.json` / `voice-profile.json`, then consumed through the resolution order above.
 
 See `references/data-layout.md` for full config schema.
 
