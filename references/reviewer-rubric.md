@@ -1,6 +1,6 @@
 # Reviewer Rubric - WeChat 公众号 Article Quality
 
-> v6.1 - 2026-04-22. Unified-score gate + author-presence revision.
+> v7 - 2026-04-22. Unified-score gate + author-presence revision.
 > Reviewers judge **the text on the page**, not platform outcomes.
 > A reviewer cannot predict shares, open rate, or distribution luck. A reviewer can judge whether the draft is specific, original, emotionally alive, readable on mobile, and voiced like a real person with a real point of view.
 
@@ -82,7 +82,7 @@ This predicts whether each screen earns the next scroll.
 
 Natural Chinese that sounds like **a specific person thinking on the page**, not a committee or a pattern engine.
 
-This is the primary detector for **作者不在场感** and visible AI-flavor.
+This is the primary detector for **作者不在场感** and visible AI flavor.
 
 Reviewer must explicitly judge these four sub-signals inside `Voice`:
 1. **Opening interchangeability** — could the opening be pasted onto 30-50 other articles on the same topic without anyone noticing?
