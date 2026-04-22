@@ -1,0 +1,169 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://openclaw.dev/schemas/wechat-article-writer/voice-pack.json",
+  "title": "WeChatArticleWriter Voice Pack",
+  "description": "Concrete authorial writing asset for WeChat article generation. Prefer this over abstract voice-profile statistics when available.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "meta",
+    "persona",
+    "rhythm",
+    "openings",
+    "turns",
+    "endings",
+    "sharp_lines",
+    "anti_examples",
+    "signature_phrases",
+    "avoid_phrases",
+    "prompt_injection"
+  ],
+  "properties": {
+    "meta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["created_at", "updated_at", "article_count", "version"],
+      "properties": {
+        "created_at": {"type": "string", "format": "date-time"},
+        "updated_at": {"type": "string", "format": "date-time"},
+        "article_count": {"type": "integer", "minimum": 0},
+        "version": {"type": "string"},
+        "source_titles": {
+          "type": "array",
+          "items": {"type": "string"},
+          "maxItems": 50
+        },
+        "notes": {"type": "string"}
+      }
+    },
+    "persona": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["persona_mode", "reader_relationship", "opinion_strength"],
+      "properties": {
+        "persona_mode": {
+          "type": "string",
+          "enum": ["ai_native", "mixed", "human_like"]
+        },
+        "reader_relationship": {
+          "type": "string",
+          "enum": ["peer_to_peer", "friend_to_friend", "mentor_student", "expert_to_layperson"]
+        },
+        "opinion_strength": {
+          "type": "string",
+          "enum": ["mild_opinion", "clear_stance", "provocative"]
+        },
+        "humor_level": {
+          "type": "string",
+          "enum": ["none", "occasional_wit", "light_humor", "playful"]
+        },
+        "author_label": {"type": "string"},
+        "boundary_notes": {"type": "string"}
+      }
+    },
+    "rhythm": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["avg_sentence_chars", "short_sentence_ratio", "long_sentence_ratio", "variation_score"],
+      "properties": {
+        "avg_sentence_chars": {"type": "number"},
+        "short_sentence_ratio": {"type": "number", "minimum": 0, "maximum": 1},
+        "long_sentence_ratio": {"type": "number", "minimum": 0, "maximum": 1},
+        "variation_score": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    },
+    "openings": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {"$ref": "#/definitions/exemplar"}
+    },
+    "turns": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {"$ref": "#/definitions/exemplar"}
+    },
+    "endings": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 20,
+      "items": {"$ref": "#/definitions/exemplar"}
+    },
+    "sharp_lines": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 30,
+      "items": {"$ref": "#/definitions/exemplar"}
+    },
+    "explanation_moves": {
+      "type": "array",
+      "maxItems": 20,
+      "items": {"$ref": "#/definitions/exemplar"}
+    },
+    "signature_phrases": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {"type": "string"}
+    },
+    "avoid_phrases": {
+      "type": "array",
+      "maxItems": 30,
+      "items": {"type": "string"}
+    },
+    "anti_examples": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["openings", "transitions", "endings"],
+      "properties": {
+        "openings": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {"$ref": "#/definitions/anti_example"}
+        },
+        "transitions": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {"$ref": "#/definitions/anti_example"}
+        },
+        "endings": {
+          "type": "array",
+          "maxItems": 20,
+          "items": {"$ref": "#/definitions/anti_example"}
+        }
+      }
+    },
+    "prompt_injection": {
+      "type": "string",
+      "maxLength": 1200
+    }
+  },
+  "definitions": {
+    "exemplar": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text"],
+      "properties": {
+        "text": {"type": "string", "minLength": 8, "maxLength": 400},
+        "source_title": {"type": "string"},
+        "source_path": {"type": "string"},
+        "reason": {"type": "string"},
+        "pattern_tags": {
+          "type": "array",
+          "items": {"type": "string"},
+          "maxItems": 10
+        }
+      }
+    },
+    "anti_example": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text", "why_bad"],
+      "properties": {
+        "text": {"type": "string", "minLength": 6, "maxLength": 240},
+        "why_bad": {"type": "string", "maxLength": 240},
+        "source_title": {"type": "string"}
+      }
+    }
+  }
+}
