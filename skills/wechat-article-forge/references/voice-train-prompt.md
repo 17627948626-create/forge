@@ -2,7 +2,7 @@
 
 Use this contract for `forge voice train`.
 
-The goal is not to invent a persona. The goal is to **compile** existing workspace persona and historical writing into assets the Writer and Reviewer can use directly inside OpenClaw.
+The goal is not to invent a persona. The goal is to **compile** existing workspace persona and historical writing into assets the Writer and Reviewer can use directly inside Hermes.
 
 ## Inputs
 
@@ -62,7 +62,7 @@ Good `voice-profile.json` output should summarize:
 - rhetoric and vocabulary tendencies
 - fallback persona/tone hints
 
-## OpenClaw Boundary
+## Hermes Boundary
 
 The repo contract stops at compiled assets.
 

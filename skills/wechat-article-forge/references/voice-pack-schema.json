@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$id": "https://openclaw.dev/schemas/wechat-article-writer/voice-pack.json",
+  "$id": "https://hermes.dev/schemas/wechat-article-writer/voice-pack.json",
   "title": "WeChatArticleWriter Voice Pack",
   "description": "Concrete authorial writing asset for WeChat article generation. Prefer this over abstract voice-profile statistics when available.",
   "type": "object",

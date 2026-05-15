@@ -84,7 +84,7 @@ If the backend is still waiting for the same human action:
 If the article is now `审核中`, `已发表`, `已提交`, or the safe-check dialog is gone and publish clearly progressed:
 
 1. Clear or overwrite the old blocked-state fields
-   - recommended helper: `python /root/.openclaw/skills/wechat-article-forge/scripts/clear_publish_blocked_state.py --state-path <draft-dir>/pipeline-state.json --status in_review|published --phase published|done --current-step reader_side_in_review|reader_side_published`
+   - recommended helper: `python3 ${HERMES_SKILL_DIR}/scripts/clear_publish_blocked_state.py --state-path <draft-dir>/pipeline-state.json --status in_review|published --phase published|done --current-step reader_side_in_review|reader_side_published`
 2. Set the authoritative publish status (`reader_side_in_review`, `reader_side_published`, `done`, etc.)
 3. Do not keep stale `safe_check_qr_path` / `relay_status=pending_parent_forward` in the active state
 
@@ -128,7 +128,7 @@ Intent: heartbeat / resume must read **"platform cooldown, retry later"**, not *
 If publish is cancelled, irrecoverably failed, or blocked by a deterministic content issue such as `链接不合法`:
 
 1. Clear or overwrite the old blocked state
-   - recommended helper: `python /root/.openclaw/skills/wechat-article-forge/scripts/clear_publish_blocked_state.py --state-path <draft-dir>/pipeline-state.json --status failed|cancelled|blocked --phase done|blocked --current-step publish_failed|publish_cancelled|waiting_content_fix --state error`
+   - recommended helper: `python3 ${HERMES_SKILL_DIR}/scripts/clear_publish_blocked_state.py --state-path <draft-dir>/pipeline-state.json --status failed|cancelled|blocked --phase done|blocked --current-step publish_failed|publish_cancelled|waiting_content_fix --state error`
 2. Mark the run `failed` / `cancelled` / `blocked_for_content_fix`
 3. If this is a deterministic content fix branch, do not keep `waiting_for=boss_scan` or another stale human-handoff field in the active state
 4. Do not let resume logic misread the run as still waiting for a QR scan
@@ -141,7 +141,7 @@ If `timeout_at` has passed and the run is still waiting on the same human action
 2. Recommended command:
 
 ```bash
-python /root/.openclaw/skills/wechat-article-forge/scripts/check_publish_blocked_timeout.py \
+python3 ${HERMES_SKILL_DIR}/scripts/check_publish_blocked_timeout.py \
   --state-path <draft-dir>/pipeline-state.json \
   --run-lock-path <explicit-run-lock-if-known>
 ```
@@ -210,7 +210,7 @@ This is **fail-closed + rerun**, not fail-stop:
 Before any publish attempt, run:
 
 ```bash
-python /root/.openclaw/skills/wechat-article-forge/scripts/lineage_audit.py <draft-dir> --json --write-state
+python3 ${HERMES_SKILL_DIR}/scripts/lineage_audit.py <draft-dir> --json --write-state
 ```
 
 Interpretation:

@@ -1,6 +1,6 @@
 # Pipeline State Machine (Compaction-Safe)
 
-The orchestrator persists state to `/root/.openclaw/workspace/wechat-article-writer/drafts/<slug>/pipeline-state.json` **before every subagent spawn and after every step completion**. This file is the single source of truth for resuming after context compaction or session restart.
+The orchestrator persists state to `<article-workspace>/drafts/<slug>/pipeline-state.json` **before every child agent spawn and after every step completion**. This file is the single source of truth for resuming after context compaction or session restart.
 
 For publish-time human handoff (`safe_check`, `login_scan`, `boss_confirm`), `pipeline-state.json` is the **durable control plane**. Text-only child completion is not enough.
 
@@ -13,7 +13,7 @@ For publish-time human handoff (`safe_check`, `login_scan`, `boss_confirm`), `pi
   "run_id": "manual:example:123",
   "source_mode": "fresh",
   "profile": "不上班也有Money",
-  "published_log_path": "/root/.openclaw/workspace/wechat-article-writer/published-log.jsonl",
+  "published_log_path": "<article-workspace>/published-log.jsonl",
   "step": 5,
   "phase": "reviewing",
   "purpose": "One-sentence 初心 statement",
@@ -35,11 +35,11 @@ For publish-time human handoff (`safe_check`, `login_scan`, `boss_confirm`), `pi
   "lite_preflight": {
     "binding_status": "matched",
     "binding_checked_at": "2026-02-19T13:49:31Z",
-    "binding_artifact": "/root/.openclaw/workspace/wechat-article-writer/drafts/growth-mindset-ai-20260219/writer-lite-binding.json",
+    "binding_artifact": "<article-workspace>/drafts/growth-mindset-ai-20260219/writer-lite-binding.json",
     "last_draft_file": "draft-v3.md",
     "last_draft_version": "draft-v3",
     "last_draft_sha256": "abc123",
-    "latest_check_path": "/root/.openclaw/workspace/wechat-article-writer/drafts/growth-mindset-ai-20260219/writer-lite-check.json",
+    "latest_check_path": "<article-workspace>/drafts/growth-mindset-ai-20260219/writer-lite-check.json",
     "previous_check_draft_version": "draft-v2",
     "previous_check_draft_sha256": "old456",
     "latest_check_draft_version": "draft-v3",
@@ -51,15 +51,15 @@ For publish-time human handoff (`safe_check`, `login_scan`, `boss_confirm`), `pi
     }
   },
   "style_lint": {
-    "artifact": "/root/.openclaw/workspace/wechat-article-writer/drafts/growth-mindset-ai-20260219/style-lint.json",
+    "artifact": "<article-workspace>/drafts/growth-mindset-ai-20260219/style-lint.json",
     "draft_file": "draft-v3.md",
     "draft_sha256": "abc123",
     "status": "pass",
     "bounce_count": 0,
     "blocking_codes": []
   },
-  "subagent_label": "reviewer-growth-mindset-v3",
-  "subagent_status": "pending",
+  "child_label": "reviewer-growth-mindset-v3",
+  "child_status": "pending",
   "pending_action": "spawn_reviewer",
   "lineage_status": "clean",
   "lineage_audited_at": "2026-02-19T13:49:30Z",
@@ -67,14 +67,14 @@ For publish-time human handoff (`safe_check`, `login_scan`, `boss_confirm`), `pi
   "repair_attempts": 0,
   "children": {
     "writer": [{
-      "session_key": "agent:main:subagent:writer-example",
+      "session_key": "agent:main:child:writer-example",
       "label": "writer-growth-mindset-v3",
       "model": "github-copilot/claude-opus-4.6",
       "status": "done",
       "artifacts": ["draft-v3.md"]
     }],
     "reviewer": [{
-      "session_key": "agent:main:subagent:reviewer-example",
+      "session_key": "agent:main:child:reviewer-example",
       "label": "reviewer-growth-mindset-v3",
       "model": "openai-codex/gpt-5.4",
       "status": "done",
@@ -85,13 +85,13 @@ For publish-time human handoff (`safe_check`, `login_scan`, `boss_confirm`), `pi
     "draft-v3.md": {
       "producer_type": "child",
       "producer_step": "writer",
-      "session_key": "agent:main:subagent:writer-example",
+      "session_key": "agent:main:child:writer-example",
       "model": "github-copilot/claude-opus-4.6"
     },
     "review-v2.json": {
       "producer_type": "child",
       "producer_step": "reviewer",
-      "session_key": "agent:main:subagent:reviewer-example",
+      "session_key": "agent:main:child:reviewer-example",
       "model": "openai-codex/gpt-5.4"
     }
   },
@@ -108,7 +108,7 @@ For publish-time human handoff (`safe_check`, `login_scan`, `boss_confirm`), `pi
 
 When reader-side publish hits a human checkpoint (`safe_check`, login QR, boss confirmation), the orchestrator must **first** durably write a blocked state, then return `need_user_action` upward.
 
-Recommended durable QR location: `/root/.openclaw/media/wechat-safe-check/<sanitized-run-id>/safe-check.png`
+Recommended durable QR location: `<article-workspace>/media/wechat-safe-check/<sanitized-run-id>/safe-check.png`
 
 - Must be a **stable absolute path**
 - Must **not** be under `/tmp`
@@ -127,7 +127,7 @@ Recommended durable QR location: `/root/.openclaw/media/wechat-safe-check/<sanit
   "waiting_for": "boss_scan",
   "required_user_action": "safe_check_scan",
   "pending_action": "wait_boss_scan",
-  "safe_check_qr_path": "/root/.openclaw/media/wechat-safe-check/cron-evening-2026-04-02T20-00-00-08-00/safe-check.png",
+  "safe_check_qr_path": "<article-workspace>/media/wechat-safe-check/cron-evening-2026-04-02T20-00-00-08-00/safe-check.png",
   "qr_verified": true,
   "qr_verification_method": "manual",
   "relay_status": "pending_parent_forward",
@@ -149,7 +149,7 @@ Recommended durable QR location: `/root/.openclaw/media/wechat-safe-check/<sanit
     "current_step": "waiting_safe_check_scan",
     "waiting_for": "boss_scan",
     "required_user_action": "safe_check_scan",
-    "safe_check_qr_path": "/root/.openclaw/media/wechat-safe-check/cron-evening-2026-04-02T20-00-00-08-00/safe-check.png",
+    "safe_check_qr_path": "<article-workspace>/media/wechat-safe-check/cron-evening-2026-04-02T20-00-00-08-00/safe-check.png",
     "qr_updated_at": "2026-04-02T12:01:11Z",
     "blocking_since": "2026-04-02T12:01:11Z",
     "timeout_at": "2026-04-02T12:11:11Z",
@@ -223,8 +223,8 @@ Do **not** overload `pending_action` with user-facing verbs like `safe_check_sca
 | `schema_version` | Current canonical write schema marker; reader should be wide, writer should be strict |
 | `source_mode` | `fresh` \| `resume` |
 | `profile` | Selected公众号名称。`write` / `draft` / `publish` 时必须存在，且应与 `profiles.json` 的 key 完全一致；不得回退到顶层默认作者/发布配置猜测账号 |
-| `subagent_status` | `pending` \| `done` \| `failed` \| `null` |
-| `pass_threshold` / `min_dimension` | `pass_threshold` is only an optional mirror/snapshot for observability. The sole authoritative threshold lives in `/root/.openclaw/workspace-xiaolongxia/wechat-article-writer/config.json` → `review_pass_threshold`. `min_dimension` remains optional unless caller policy explicitly enforces it. |
+| `child_status` | `pending` \| `done` \| `failed` \| `null` |
+| `pass_threshold` / `min_dimension` | `pass_threshold` is only an optional mirror/snapshot for observability. The sole authoritative threshold lives in `<article-workspace>/config.json` → `review_pass_threshold`. `min_dimension` remains optional unless caller policy explicitly enforces it. |
 | `lineage_status` | `clean` \| `dirty` \| `repairing` |
 | `last_clean_step` | Last trustworthy step name with both artifact + child evidence |
 | `repair_attempts` | Non-negative integer; increment on each dirty-lineage recovery attempt |
@@ -267,31 +267,31 @@ Do **not** overload `pending_action` with user-facing verbs like `safe_check_sca
 4. If the preferred slug directory already exists, generate a new unique slug and fresh directory; never reuse the existing one in `fresh` mode.
 5. Write initial `pipeline-state.json` for the fresh slug before research or child spawning.
 6. Fresh runs must **not** inherit old blocked-state fields from a previous run. New slug + new `run_id` means a clean control plane.
-7. If `subagent_label` is set and `subagent_status` is `pending`:
-   - Check via `subagents list` or completion event.
+7. If `child_label` is set and `child_status` is `pending`:
+   - Check via `Hermes delegation/session status` or completion event.
    - Done → read result, save output verbatim, advance step.
    - Running → report and wait (up to 1 hour for child-session completion unless there is an explicit unrecoverable error). Do NOT re-spawn. Do NOT kill purely because early `sessions_history` is sparse or empty.
    - Failed → set `error`, set `phase: "blocked"`, notify user.
 8. If `phase` is `awaiting_human` or `blocked`, inspect `waiting_for`, `required_user_action`, `safe_check_qr_path`, `relay_status`, and `control_plane_sync` before doing anything else.
-9. If no subagent pending → execute `pending_action`.
+9. If no child agent pending → execute `pending_action`.
 10. Resolve the target公众号 profile before research/publish. Persist `profile` + the effective `published_log_path` into state so resume runs keep using the same account context.
 10.5. **Before Reviewer consumes a newer draft (and again before downstream use of a changed latest draft):** ensure latest-draft vs latest-lite-check binding is durable.
-   - Command: `python /root/.openclaw/skills/wechat-article-forge/scripts/ensure_latest_lite_binding.py --state-path <draft-dir>/pipeline-state.json --mode rerun|waiver [--waiver-reason "..."]`
+   - Command: `python3 ${HERMES_SKILL_DIR}/scripts/ensure_latest_lite_binding.py --state-path <draft-dir>/pipeline-state.json --mode rerun|waiver [--waiver-reason "..."]`
    - If `last_draft_file` and canonical `writer-lite-check.json` mismatch on `draft_version` / `draft_sha256`, the caller must either rerun lite preflight or persist an explicit waiver. Silent stale-check carry-over is forbidden.
    - The helper must write both `writer-lite-binding.json` and `pipeline-state.json.lite_preflight` so resume logic can see the binding decision.
 11. **Before draft-box publish**: run explicit profile preflight; do not guess/fallback.
-   - Command: `python /root/.openclaw/skills/wechat-article-forge/scripts/publish_profile_preflight.py --profile <profile> --state-path <draft-dir>/pipeline-state.json --publish-md <draft-dir>/publish.md`
+   - Command: `python3 ${HERMES_SKILL_DIR}/scripts/publish_profile_preflight.py --profile <profile> --state-path <draft-dir>/pipeline-state.json --publish-md <draft-dir>/publish.md`
    - This must validate `publisher.mcp_config_file`, confirm the config explicitly contains `wenyan-mcp`, and ensure `publish.md` frontmatter carries the same explicit `profile` / `author` contract.
 12. **Before spawning**: write state with label + `pending` FIRST, plus `run_id` / `source_mode`.
 13. **After completion**: save output verbatim, update state, then proceed.
 14. **After every child-step completion**: immediately write canonical lineage at the top level.
-   - Required command: `python /root/.openclaw/skills/wechat-article-forge/scripts/update_pipeline_lineage.py --state-path <draft-dir>/pipeline-state.json --step <researcher|writer|reviewer|layout> --session-key <child-session-key> --model <model> --label <label> --artifacts <artifact1> [<artifact2> ...]`
+   - Required command: `python3 ${HERMES_SKILL_DIR}/scripts/update_pipeline_lineage.py --state-path <draft-dir>/pipeline-state.json --step <researcher|writer|reviewer|layout> --session-key <child-session-key> --model <model> --label <label> --artifacts <artifact1> [<artifact2> ...]`
    - On Reviewer pass, pass the exact approved draft: `--approved-artifact <last_draft_file>` so the helper records `reviewed_draft_file`, `reviewed_draft_sha256`, and `content_finalized_by=reviewer`.
    - For Layout, pass the exact reviewed draft: `--input-artifact <reviewed_draft_file>`. The helper must fail closed if reviewer-approved bytes are missing or if the input does not match them.
    - Canonical artifact keys must use **draft-dir relative file names / basenames only** (for example `research.json`, `draft-v4.md`, `review-v3.json`, `final-layout.md`). Do not mix absolute paths, alias keys like `draft_v3_md`, `final.md`, or nested `artifact_paths` as publish authority.
    - Top-level `children` + `artifact_provenance` are the publish-control authority. Nested `lineage.*` may remain as compatibility/debug mirrors only.
 15. **Before publish**: run a lineage audit and persist the audit marker before cleanup.
-   - Command: `python /root/.openclaw/skills/wechat-article-forge/scripts/lineage_audit.py <draft-dir> --json --write-state`
+   - Command: `python3 ${HERMES_SKILL_DIR}/scripts/lineage_audit.py <draft-dir> --json --write-state`
    - `--write-state` is the canonical lazy-migration path: it may wide-read legacy aliases, but it must write back canonical `children` / `artifact_provenance` keys plus `schema_version` / `lineage_audited_at`.
    - If a required body artifact lacks matching child-session evidence, set `lineage_status: "dirty"`, record `last_clean_step`, increment `repair_attempts`, and switch `pending_action` to a repair/rerun branch instead of publishing.
 16. **Dirty lineage never publishes directly.** Resume from the last clean checkpoint, or start a fresh run if no clean checkpoint exists.
@@ -320,7 +320,7 @@ Blocked-state fields must be cleared or overwritten when any of these happens:
 
 1. **Boss already scanned / confirmed and the flow continues**
    - clear or overwrite `waiting_for`, `required_user_action`, `safe_check_qr_path`, `relay_status`, `relay_dedupe_key`, `boss_notified_at`, `qr_updated_at`, `blocking_since`, `blocking`, `handoff`
-   - recommended helper: `python /root/.openclaw/skills/wechat-article-forge/scripts/clear_publish_blocked_state.py --state-path <draft-dir>/pipeline-state.json --status in_review --phase published --current-step reader_side_in_review [--run-lock-path ...]`
+   - recommended helper: `python3 ${HERMES_SKILL_DIR}/scripts/clear_publish_blocked_state.py --state-path <draft-dir>/pipeline-state.json --status in_review --phase published --current-step reader_side_in_review [--run-lock-path ...]`
 2. **Reader-side publish reaches `in-review`, `published`, or `done`**
    - blocked-state fields must not remain authoritative after terminal or post-submit states
    - recommended helper: `clear_publish_blocked_state.py` with `--status in_review|published --phase published|done`

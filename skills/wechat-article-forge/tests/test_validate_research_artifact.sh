@@ -11,7 +11,7 @@ cat > "$TEST_ROOT/research-missing.json" <<'JSON'
   "why_now": "不到 24 小时拿到 539 stars、115 forks。",
   "anchors": [
     {
-      "claim": "README 明确写可安装到 Claude Code、OpenClaw、Codex 等工具。",
+      "claim": "README 明确写可安装到 Claude Code、Hermes、Codex 等工具。",
       "evidence": [
         "原文写：『把我自己在用的内容创作 Skill，完整的，一字不改地开源了。』",
         "style_examples.md 是 16790 bytes"
@@ -47,7 +47,7 @@ cat > "$TEST_ROOT/research-good.json" <<'JSON'
   "why_now": "不到 24 小时拿到 539 stars、115 forks。",
   "anchors": [
     {
-      "claim": "README 明确写可安装到 Claude Code、OpenClaw、Codex 等工具。",
+      "claim": "README 明确写可安装到 Claude Code、Hermes、Codex 等工具。",
       "evidence": [
         "原文写：『把我自己在用的内容创作 Skill，完整的，一字不改地开源了。』",
         "style_examples.md 是 16790 bytes"
@@ -69,7 +69,7 @@ cat > "$TEST_ROOT/research-good.json" <<'JSON'
       "id": "F2",
       "kind": "readme_claim",
       "attribution_required": true,
-      "needle": "可安装到 Claude Code、OpenClaw、Codex 等工具"
+      "needle": "可安装到 Claude Code、Hermes、Codex 等工具"
     },
     {
       "id": "F3",

@@ -50,7 +50,7 @@ cat > "$TEST_ROOT/profiles.json" <<JSON
       "published_log_path": "$TEST_ROOT/ambient.jsonl",
       "publisher": {
         "mcp_server": "wenyan-mcp",
-        "mcp_config_file": "~/.openclaw/mcp.json",
+        "mcp_config_file": "../outside-mcp.json",
         "mode": "remote"
       }
     }
@@ -116,8 +116,7 @@ fi
 
 echo "Test 3: PASS"
 
-mkdir -p "$TEST_ROOT/home/.openclaw"
-cat > "$TEST_ROOT/home/.openclaw/mcp.json" <<'JSON'
+cat > "$TEST_ROOT/../outside-mcp.json" <<'JSON'
 {
   "mcpServers": {
     "wenyan-mcp": {
@@ -131,6 +130,8 @@ if HOME="$TEST_ROOT/home" "$PYTHON_BIN" "$SCRIPT" --config-path "$TEST_ROOT/conf
   echo "Expected ambient global mcp.json rejection, but command succeeded" >&2
   exit 1
 fi
+
+rm -f "$TEST_ROOT/../outside-mcp.json"
 
 echo "Test 4: PASS"
 

@@ -5,8 +5,10 @@ Fail-closed rules:
 - profile is mandatory
 - unknown profile is an error
 - publisher.mcp_config_file must exist and be readable
-- config must explicitly contain wenyan-mcp
-- no implicit fallback to global/default config
+- publisher.mcp_config_file and published_log_path must stay inside the active
+  article workspace
+- config must explicitly contain the requested MCP server
+- no implicit fallback to global/default config or another Hermes profile
 """
 
 from __future__ import annotations
@@ -71,6 +73,12 @@ def resolve_config_path(raw: str, base_dir: Path) -> Path:
     return candidate
 
 
+def ensure_within(path: Path, parent: Path, label: str) -> None:
+    try:
+        path.resolve().relative_to(parent.resolve())
+    except ValueError:
+        raise ValueError(f"{label} must be inside active article workspace: {path}")
+
 
 def parse_frontmatter(path: Path) -> Dict[str, str]:
     text = path.read_text(encoding="utf-8")
@@ -113,6 +121,7 @@ def validate_publish_frontmatter(publish_md_path: Path, profile_result: Dict[str
 
 
 def validate_profile(config_path: Path, profile: str) -> Tuple[Dict[str, Any], Dict[str, Any], Path]:
+    article_workspace = config_path.parent.resolve()
     config = load_json(config_path)
     profiles_path_raw = config.get("profiles_path")
     if not isinstance(profiles_path_raw, str) or not profiles_path_raw.strip():
@@ -145,6 +154,7 @@ def validate_profile(config_path: Path, profile: str) -> Tuple[Dict[str, Any], D
     published_log_resolved = resolve_config_path(published_log_path, profiles_path.parent)
     if not published_log_resolved.is_absolute():
         raise ValueError(f"profile {profile!r} published_log_path must resolve to an absolute path")
+    ensure_within(published_log_resolved, article_workspace, "published_log_path")
 
     default_theme = profile_doc.get("default_theme")
     if default_theme != "sspai":
@@ -155,12 +165,7 @@ def validate_profile(config_path: Path, profile: str) -> Tuple[Dict[str, Any], D
         raise ValueError(f"profile {profile!r} missing publisher.mcp_config_file")
 
     mcp_config_path = resolve_config_path(mcp_config_raw, profiles_path.parent)
-    ambient_global_mcp_paths = {
-        Path("~/.openclaw/mcp.json").expanduser().resolve(),
-        Path("/root/.openclaw/mcp.json").resolve(),
-    }
-    if mcp_config_path in ambient_global_mcp_paths:
-        raise ValueError(f"profile {profile!r} must not use ambient global mcp.json; set a profile-scoped mcp_config_file")
+    ensure_within(mcp_config_path, article_workspace, "publisher.mcp_config_file")
     if not mcp_config_path.exists() or not mcp_config_path.is_file():
         raise FileNotFoundError(f"mcp_config_file not found: {mcp_config_path}")
     if not os.access(mcp_config_path, os.R_OK):
@@ -168,8 +173,11 @@ def validate_profile(config_path: Path, profile: str) -> Tuple[Dict[str, Any], D
 
     mcp_doc = load_json(mcp_config_path)
     servers = mcp_doc.get("mcpServers")
-    if not isinstance(servers, dict) or "wenyan-mcp" not in servers:
-        raise ValueError(f"mcp config missing wenyan-mcp: {mcp_config_path}")
+    mcp_server = publisher.get("mcp_server") or "wenyan-mcp"
+    if not isinstance(mcp_server, str) or not mcp_server.strip():
+        raise ValueError(f"profile {profile!r} has invalid publisher.mcp_server")
+    if not isinstance(servers, dict) or mcp_server not in servers:
+        raise ValueError(f"mcp config missing {mcp_server}: {mcp_config_path}")
 
     result = {
         "profile": profile,
@@ -177,7 +185,7 @@ def validate_profile(config_path: Path, profile: str) -> Tuple[Dict[str, Any], D
         "published_log_path": str(published_log_resolved),
         "default_theme": default_theme,
         "publisher_mode": publisher.get("mode"),
-        "mcp_server": publisher.get("mcp_server") or "wenyan-mcp",
+        "mcp_server": mcp_server,
         "mcp_config_file": str(mcp_config_path),
         "checked_at": iso_now(),
         "wenyan_mcp_present": True,

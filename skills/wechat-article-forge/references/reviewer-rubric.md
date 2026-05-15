@@ -10,7 +10,7 @@ Reviewer output uses **one unified scoring gate**.
 
 Hard rule:
 - **Final pass requires `weighted_total >= review_pass_threshold`**
-- **`review_pass_threshold` lives in exactly one authority source: `/root/.openclaw/workspace-xiaolongxia/wechat-article-writer/config.json` → `review_pass_threshold`**
+- **`review_pass_threshold` lives in exactly one authority source: `<article-workspace>/config.json` → `review_pass_threshold`**
 - Severe problems are **not** managed as a separate blocker gate; they must be reflected as heavy score damage inside the relevant dimensions, especially `Voice`, `Completion Power`, `Title`, and `Insight Density`
 - `upgrade_suggestions` remain **non-blocking by default**
 - `upgrade_suggestions` should default to **at most 3 items**

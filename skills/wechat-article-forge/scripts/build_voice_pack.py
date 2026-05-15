@@ -2,7 +2,7 @@
 """Build a concrete voice-pack plus fallback voice-profile from article samples.
 
 The builder is intentionally deterministic and offline-friendly so it can run
-inside OpenClaw workspaces without additional model calls.
+inside Hermes workspaces without additional model calls.
 """
 
 from __future__ import annotations

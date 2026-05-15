@@ -1,6 +1,6 @@
 # Quality Checks Reference
 
-This file describes the **active** quality gates for `forge write` / `forge draft` under the OpenClaw deployment model:
+This file describes the **active** quality gates for `forge write` / `forge draft` under the Hermes deployment model:
 
 - one shared GPT-5.4 model family
 - no tuning / temperature / decoding parameter strategy layer
@@ -91,22 +91,22 @@ The following are **not** active quality mechanisms anymore:
 - automatic hook insertion after review
 - model-parameter tuning as a style strategy
 
-Those approaches either blur authority boundaries or depend on knobs OpenClaw does not expose.
+Those approaches either blur authority boundaries or depend on knobs Hermes does not expose.
 
 ## Manual Commands
 
 ```bash
 # Mechanical draft red lights
-python scripts/writer_lite_preflight.py /path/to/draft.md --output /path/to/writer-lite-check.json
+python3 scripts/writer_lite_preflight.py /path/to/draft.md --output /path/to/writer-lite-check.json
 
 # Authorial style red lights
-python scripts/style_fingerprint_lint.py /path/to/draft.md --output /path/to/style-lint.json
+python3 scripts/style_fingerprint_lint.py /path/to/draft.md --output /path/to/style-lint.json
 
 # Research contract validation
-python scripts/validate_research_artifact.py /path/to/research.json --output /path/to/research-gate.json
+python3 scripts/validate_research_artifact.py /path/to/research.json --output /path/to/research-gate.json
 
 # Outline contract validation
-python scripts/outline_gate.py /path/to/outline.md --output /path/to/outline-gate.json
+python3 scripts/outline_gate.py /path/to/outline.md --output /path/to/outline-gate.json
 ```
 
 ## Design Principle

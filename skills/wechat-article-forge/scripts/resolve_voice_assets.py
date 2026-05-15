@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Resolve OpenClaw voice assets with source-aware fallback rules."""
+"""Resolve Hermes profile-local voice assets with source-aware fallback rules."""
 
 from __future__ import annotations
 
@@ -20,8 +20,17 @@ def existing_file(path: Optional[Path]) -> Optional[Path]:
     return None
 
 
+def resolve_path(raw: object, base_dir: Path) -> Optional[Path]:
+    if not isinstance(raw, str) or not raw.strip():
+        return None
+    candidate = Path(raw).expanduser()
+    if not candidate.is_absolute():
+        candidate = base_dir / candidate
+    return candidate.resolve()
+
+
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Resolve voice-pack / voice-profile assets for an OpenClaw workspace.")
+    parser = argparse.ArgumentParser(description="Resolve voice-pack / voice-profile assets for a Hermes article workspace.")
     parser.add_argument("--config-path", required=True)
     parser.add_argument("--workspace-path", help="Workspace writer directory. Defaults to config parent.")
     parser.add_argument("--profile", required=True)
@@ -32,7 +41,9 @@ def main() -> int:
     repo_root = Path(__file__).resolve().parent.parent
 
     config = load_json(config_path)
-    profiles_path = Path(str(config.get("profiles_path", workspace_path / "profiles.json"))).expanduser().resolve()
+    profiles_path = resolve_path(config.get("profiles_path") or "profiles.json", config_path.parent)
+    if profiles_path is None:
+        profiles_path = (workspace_path / "profiles.json").resolve()
     profiles = load_json(profiles_path).get("profiles", {})
     profile = profiles.get(args.profile, {}) if isinstance(profiles, dict) else {}
     if not isinstance(profile, dict):
@@ -40,8 +51,8 @@ def main() -> int:
 
     warnings: List[str] = []
 
-    configured_pack = existing_file(Path(str(profile.get("voice_pack_path"))).expanduser()) if profile.get("voice_pack_path") else None
-    configured_profile = existing_file(Path(str(profile.get("voice_profile_path"))).expanduser()) if profile.get("voice_profile_path") else None
+    configured_pack = existing_file(resolve_path(profile.get("voice_pack_path"), profiles_path.parent))
+    configured_profile = existing_file(resolve_path(profile.get("voice_profile_path"), profiles_path.parent))
 
     if profile.get("voice_pack_path") and not configured_pack:
         warnings.append("configured voice_pack_path missing; falling back")

@@ -22,7 +22,7 @@ cat > "$state_path" <<'JSON'
   "current_step": "waiting_safe_check_scan",
   "waiting_for": "boss_scan",
   "required_user_action": "safe_check_scan",
-  "safe_check_qr_path": "/root/.openclaw/media/wechat-safe-check/manual-test-clear-blocked/safe-check.png",
+  "safe_check_qr_path": "<article-workspace>/media/wechat-safe-check/manual-test-clear-blocked/safe-check.png",
   "relay_status": "acknowledged",
   "boss_notified_at": "2026-04-07T07:39:00Z",
   "blocking_since": "2026-04-07T07:39:00Z",
@@ -40,7 +40,7 @@ cat > "$lock_path" <<'JSON'
   "status": "need_user_action",
   "phase": "awaiting_human",
   "current_step": "waiting_safe_check_scan",
-  "safe_check_qr_path": "/root/.openclaw/media/wechat-safe-check/manual-test-clear-blocked/safe-check.png",
+  "safe_check_qr_path": "<article-workspace>/media/wechat-safe-check/manual-test-clear-blocked/safe-check.png",
   "lock_unknown": "preserve"
 }
 JSON
@@ -92,7 +92,7 @@ cat > "$state_path" <<'JSON'
   "phase": "awaiting_human",
   "current_step": "waiting_safe_check_scan",
   "waiting_for": "boss_scan",
-  "safe_check_qr_path": "/root/.openclaw/media/wechat-safe-check/manual-test-clear-blocked/safe-check.png"
+  "safe_check_qr_path": "<article-workspace>/media/wechat-safe-check/manual-test-clear-blocked/safe-check.png"
 }
 JSON
 

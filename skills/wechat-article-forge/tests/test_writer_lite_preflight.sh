@@ -25,7 +25,7 @@ cat > "$TEST_ROOT/research.json" <<'JSON'
       "id": "F3",
       "kind": "readme_claim",
       "attribution_required": true,
-      "needle": "可安装到 Claude Code、OpenClaw、Codex 等工具"
+      "needle": "可安装到 Claude Code、Hermes、Codex 等工具"
     },
     {
       "id": "F4",
@@ -42,7 +42,7 @@ cat > "$TEST_ROOT/draft-v2.md" <<'MD'
 这个仓库 539 stars，已经说明一切。
 [截图级段落位置]
 他原话说：“真正被公开竞争的，不是几段 prompt”。
-这个项目可安装到 Claude Code、OpenClaw、Codex 等工具，已经证明它是成熟标准。
+这个项目可安装到 Claude Code、Hermes、Codex 等工具，已经证明它是成熟标准。
 其中一份资料大概有 16790 字。
 MD
 
