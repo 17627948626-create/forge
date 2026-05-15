@@ -1,0 +1,16 @@
+{
+  "agents": {
+    "xiaolongxia": {
+      "session": "default",
+      "user_data_dir": "/root/.config/browser-use-profiles/xiaolongxia",
+      "owner": "小龙虾有话说",
+      "notes": "Dedicated WeChat publishing profile for xiaolongxia. Do not share with any other agent. Migrated from legacy /root/.config/browser-use-persistent on 2026-04-08."
+    },
+    "money": {
+      "session": "money",
+      "user_data_dir": "/root/.config/browser-use-profiles/money",
+      "owner": "不上班也有Money",
+      "notes": "Reserved browser-use profile for money if browser-use is ever needed. Do not point money at xiaolongxia's legacy profile."
+    }
+  }
+}
